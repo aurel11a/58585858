@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Wavey • мессенджер</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+
+    body {
+      background: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .phone-mockup {
+      max-width: 380px;
+      width: 100%;
+      background: #000;
+      border-radius: 44px;
+      padding: 12px 8px;
+      box-shadow: 0 30px 50px rgba(0, 0, 0, 0.8), 0 0 0 2px #2a2a2a inset;
+      border: 1px solid #3a3a3a;
+    }
+
+    .phone-screen {
+      background: #0c0c0c;
+      border-radius: 36px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 720px;
+      border: 1px solid #1f1f1f;
+      position: relative;
+    }
+
+    /* статус-бар */
+    .status-bar {
+      padding: 14px 20px 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #aaa;
+      letter-spacing: 0.3px;
+      background: #0c0c0c;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .status-bar .datetime {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-bar .time {
+      color: #e0e0e0;
+      font-weight: 600;
+    }
+
+    .status-bar .date {
+      color: #888;
+      font-weight: 400;
+      font-size: 12px;
+    }
+
+    .status-bar .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #aaa;
+    }
+
+    .status-bar .status-icons svg {
+      width: 16px;
+      height: 16px;
+      stroke: #aaa;
+      fill: none;
+      stroke-width: 1.8;
+    }
+
+    /* шапка приложения */
+    .app-header {
+      padding: 8px 20px 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .app-header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #f0f0f0;
+      letter-spacing: -0.3px;
+    }
+
+    .app-header .header-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      cursor: default;
+      opacity: 0.8;
+    }
+
+    .app-header .header-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: #ccc;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    /* основная область */
+    .main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* боковая панель */
+    .sidebar {
+      width: 68px;
+      background: #0a0a0a;
+      border-right: 1px solid #1e1e1e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0 20px 0;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-icon {
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      color: #7a7a7a;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sidebar-icon:hover {
+      background: #1f1f1f;
+      color: #ddd;
+    }
+
+    .sidebar-icon.active {
+      background: #2a2a2a;
+      color: #ffffff;
+    }
+
+    .sidebar-spacer {
+      flex: 1;
+    }
+
+    /* контентная панель */
+    .content-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #0c0c0c;
+      min-width: 0;
+    }
+
+    .panel {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .panel.active {
+      display: flex;
+    }
+
+    /* шапка панели */
+    .chat-list-header {
+      padding: 14px 16px 6px 16px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #bbb;
+      letter-spacing: 0.3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .chat-list-header span {
+      color: #888;
+      font-size: 13px;
+    }
+
+    /* ===== СПИСКИ ===== */
+    .chat-items, .contact-items {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 8px 8px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: #333 #0c0c0c;
+      min-height: 0;
+    }
+
+    .chat-items::-webkit-scrollbar, .contact-items::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-items::-webkit-scrollbar-track, .contact-items::-webkit-scrollbar-track {
+      background: #0c0c0c;
+    }
+
+    .chat-items::-webkit-scrollbar-thumb, .contact-items::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 8px;
+    }
+
+    .chat-item, .contact-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 10px;
+      border-radius: 16px;
+      transition: background 0.1s;
+      cursor: default;
+      margin-bottom: 2px;
+    }
+
+    .chat-item:hover, .contact-item:hover {
+      background: #161616;
+    }
+
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #2c2c2c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      font-size: 20px;
+      color: #e0e0e0;
+      margin-right: 14px;
+      flex-shrink: 0;
+      border: 1px solid #3a3a3a;
+    }
+
+    .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: #f0f0f0;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .chat-name .time {
+      font-size: 12px;
+      font-weight: 400;
+      color: #777;
+    }
+
+    .chat-message {
+      font-size: 13px;
+      color: #9a9a9a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-message .badge {
+      background: #3a3a3a;
+      color: #fff;
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ===== КОНТАКТЫ ===== */
+    .contact-phone {
+      font-size: 13px;
+      color: #888;
+      margin-top: 3px;
+      font-family: monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .contact-note {
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+      font-style: italic;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ===== ТВИТТЕР ===== */
+    .twitter-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .twitter-tab {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #333 #0c0c0c;
+      min-height: 0;
+    }
+
+    .twitter-tab.active {
+      display: flex;
+    }
+
+    .twitter-tab::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .twitter-tab::-webkit-scrollbar-track {
+      background: #0c0c0c;
+    }
+
+    .twitter-tab::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 8px;
+    }
+
+    /* --- ФОРМА ДЛЯ ТВИТА --- */
+    .tweet-compose {
+      padding: 12px 14px;
+      border-bottom: 1px solid #1e1e1e;
+      background: #0c0c0c;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .compose-top {
+      display: flex;
+      gap: 10px;
+    }
+
+    .compose-top .avatar {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+      margin-right: 0;
+    }
+
+    .compose-input {
+      flex: 1;
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: #eee;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      min-height: 60px;
+      transition: border-color 0.15s;
+      min-width: 0;
+    }
+
+    .compose-input:focus {
+      border-color: #444;
+    }
+
+    .compose-input::placeholder {
+      color: #666;
+    }
+
+    .compose-bottom {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .compose-btn {
+      background: #eee;
+      color: #000;
+      border: none;
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .compose-btn:hover {
+      background: #ccc;
+    }
+
+    .compose-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .char-count {
+      font-size: 12px;
+      color: #777;
+      margin-right: auto;
+    }
+
+    /* --- ЛЕНТА ТВИТОВ (ОБЩАЯ СТРУКТУРА) --- */
+    .twitter-feed, .my-tweets-list, .thread-nodes, .replies-list {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tweet {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid #1e1e1e;
+      padding-bottom: 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .tweet:hover {
+      background: #121212;
+      border-radius: 8px;
+    }
+
+    .tweet-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #2c2c2c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #ddd;
+      flex-shrink: 0;
+      border: 1px solid #3a3a3a;
+    }
+
+    .tweet-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Столбец с именем и юзернеймом */
+    .tweet-header {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 4px;
+    }
+
+    .tweet-user {
+      font-weight: 600;
+      color: #eee;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .tweet-handle {
+      color: #777;
+      font-size: 14px;
+    }
+
+    .tweet-text {
+      color: #ddd;
+      font-size: 15px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .tweet-actions {
+      display: flex;
+      justify-content: space-between;
+      padding-right: 24px;
+      color: #777;
+      font-size: 13px;
+    }
+
+    .tweet-actions span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: default;
+    }
+
+    .tweet-actions svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tweet-actions span:hover {
+      color: #bbb;
+    }
+
+    /* ===== ПРОФИЛЬ ===== */
+    .profile-view {
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .profile-avatar-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #2c2c2c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 600;
+      color: #e0e0e0;
+      border: 2px solid #3a3a3a;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+
+    .profile-name-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.15s;
+      margin-bottom: 4px;
+    }
+
+    .profile-name-wrapper:hover {
+      background: #1a1a1a;
+    }
+
+    .profile-name-large {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f0f0f0;
+      transition: all 0.2s;
+    }
+
+    .profile-chevron {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+      transition: transform 0.2s;
+    }
+
+    .profile-chevron svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .profile-name-wrapper:hover .profile-chevron {
+      color: #ccc;
+    }
+
+    .profile-chevron.open {
+      transform: rotate(180deg);
+    }
+
+    .profile-handle-large {
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+
+    .profile-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+      transition: all 0.2s;
+    }
+
+    .profile-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .profile-stat .num {
+      font-weight: 600;
+      color: #eee;
+      font-size: 16px;
+    }
+
+    .profile-stat .label {
+      color: #777;
+      font-size: 12px;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .profile-btn {
+      padding: 8px 24px;
+      border-radius: 20px;
+      background: #2a2a2a;
+      color: #eee;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid #3a3a3a;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .profile-btn:hover {
+      background: #333;
+    }
+
+    /* Блок "Твои твиты" */
+    .my-tweets-header {
+      padding: 16px 16px 8px 16px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #bbb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e1e1e;
+      background: #0c0c0c;
+    }
+
+    .my-tweets-header span {
+      color: #666;
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .my-tweets-list {
+      flex: 1;
+      padding: 12px 14px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: #666;
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    /* ===== ДРОПДАУН СМЕНЫ АККАУНТА ===== */
+    .account-dropdown {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 320px;
+      background: #181818;
+      border: 1px solid #2e2e2e;
+      border-radius: 16px;
+      padding: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    .account-dropdown.open {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .account-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .account-item:hover {
+      background: #252525;
+    }
+
+    .account-item .avatar {
+      width: 34px;
+      height: 34px;
+      font-size: 15px;
+      margin-right: 10px;
+      border: 1px solid #333;
+    }
+
+    .account-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .account-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #eee;
+      margin-bottom: 2px;
+    }
+
+    .account-handle {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .account-check {
+      color: #aaa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .account-check svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .account-divider {
+      height: 1px;
+      background: #2a2a2a;
+      margin: 4px 8px;
+    }
+
+    .add-account-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #888;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .add-account-row:hover {
+      background: #252525;
+      color: #ccc;
+    }
+
+    .add-account-row svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      margin-right: 10px;
+    }
+
+    .add-account-row span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Нижняя навигационная панель (Твиттер) */
+    .bottom-nav {
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 6px 0;
+      border-top: 1px solid #1e1e1e;
+      background: #0c0c0c;
+      color: #777;
+      flex-shrink: 0;
+    }
+
+    .bottom-nav .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 4px 16px;
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .bottom-nav .nav-item svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .bottom-nav .nav-item.active {
+      color: #ddd;
+    }
+
+    .bottom-nav .nav-item:hover {
+      background: #1a1a1a;
+    }
+
+    .dropdown-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      display: none;
+    }
+
+    .dropdown-overlay.open {
+      display: block;
+    }
+
+    /* ===== ЭКРАН ВЕТКИ (THREAD) ===== */
+    .thread-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #0c0c0c;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      border-radius: 36px;
+    }
+
+    .thread-overlay.open {
+      display: flex;
+    }
+
+    .thread-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1e1e1e;
+      background: #0c0c0c;
+      flex-shrink: 0;
+      gap: 24px;
+    }
+
+    .thread-back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #ccc;
+      padding: 4px;
+      border-radius: 50%;
+      transition: background 0.15s;
+    }
+
+    .thread-back-btn:hover {
+      background: #1f1f1f;
+    }
+
+    .thread-back-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .thread-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #eee;
+    }
+
+    .thread-content {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #333 #0c0c0c;
+    }
+
+    .thread-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .thread-content::-webkit-scrollbar-track {
+      background: #0c0c0c;
+    }
+
+    .thread-content::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 8px;
+    }
+
+    /* Базовый стиль для узла ветки */
+    .thread-node {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      position: relative;
+      border-bottom: none;
+    }
+
+    .thread-node:hover {
+      background: transparent;
+    }
+
+    /* Линия между твитами */
+    .thread-node.line::before {
+      content: '';
+      position: absolute;
+      left: 37px;
+      top: 64px;
+      bottom: -16px;
+      width: 2px;
+      background: #333;
+    }
+
+    .thread-node .tweet-avatar {
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+      position: relative;
+      z-index: 2;
+      border: 2px solid #0c0c0c;
+    }
+
+    .thread-node-body {
+      flex: 1;
+      min-width: 0; /* ВАЖНО: чтобы текст не выпирал */
+    }
+
+    .thread-node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .thread-node-user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .thread-node-name {
+      font-weight: 600;
+      color: #eee;
+      font-size: 15px;
+    }
+
+    .thread-node-handle {
+      color: #777;
+      font-size: 14px;
+    }
+
+    .thread-node-more {
+      color: #777;
+      cursor: pointer;
+    }
+
+    .thread-node-more svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: currentColor;
+    }
+
+    .thread-node-text {
+      color: #eee;
+      font-size: 16px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .thread-node-date {
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    /* Статистика под твитом */
+    .thread-stats-row {
+      display: flex;
+      gap: 16px;
+      color: #777;
+      font-size: 14px;
+      padding: 12px 0;
+      border-top: 1px solid #1e1e1e;
+      border-bottom: 1px solid #1e1e1e;
+      margin-bottom: 12px;
+    }
+
+    .thread-stats-row span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .thread-stats-row strong {
+      color: #ddd;
+      font-weight: 600;
+    }
+
+    .thread-node-actions {
+      display: flex;
+      justify-content: space-between;
+      padding-right: 16px;
+      color: #777;
+    }
+
+    .thread-node-actions svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      cursor: pointer;
+    }
+
+    .thread-node-actions svg:hover {
+      color: #ccc;
+    }
+
+    /* Форма ответа */
+    .reply-compose {
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      border-top: 1px solid #1e1e1e;
+      background: #0c0c0c;
+      flex-shrink: 0;
+    }
+
+    .reply-compose .avatar {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+      margin-right: 0;
+      border: 1px solid #333;
+    }
+
+    .reply-input-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 24px;
+      padding: 4px 6px 4px 16px;
+      min-width: 0;
+    }
+
+    .reply-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #eee;
+      font-size: 15px;
+      outline: none;
+      resize: none;
+      font-family: inherit;
+      height: 24px;
+      padding-top: 8px;
+      min-width: 0;
+    }
+
+    .reply-input::placeholder {
+      color: #777;
+    }
+
+    .reply-btn {
+      background: #eee;
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      flex-shrink: 0;
+    }
+
+    .reply-btn:hover {
+      background: #ccc;
+    }
+
+    .reply-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    /* Общие стили для реплаев */
+    .replies-list {
+      padding: 0;
+      gap: 0;
+    }
+
+    .replies-list .tweet {
+      padding: 16px;
+      border-bottom: 1px solid #1e1e1e;
+      border-radius: 0;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-mockup">
+    <div class="phone-screen">
+      <!-- статус-бар -->
+      <div class="status-bar">
+        <div class="datetime">
+          <span class="time">9:41</span>
+          <span class="date">пн, 27 окт</span>
+        </div>
+        <div class="status-icons">
+          <svg viewBox="0 0 24 24"><path d="M4 18v-2M8 18v-6M12 18V8M16 18V4"/></svg>
+          <svg viewBox="0 0 24 24"><rect x="2" y="8" width="16" height="10" rx="2"/><path d="M22 11v4"/></svg>
+        </div>
+      </div>
+
+      <!-- шапка Wavey -->
+      <div class="app-header">
+        <h1>wavey</h1>
+        <div class="header-icon">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+        </div>
+      </div>
+
+      <div class="main-layout">
+        <!-- ЛЕВАЯ ПАНЕЛЬ -->
+        <div class="sidebar">
+          <div class="sidebar-icon active" id="iconChat">
+            <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          </div>
+          <div class="sidebar-icon" id="iconTwitter">
+            <svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+          </div>
+          <div class="sidebar-icon" id="iconContacts">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="sidebar-spacer"></div>
+          <div class="sidebar-icon" style="opacity:0.6;">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+
+        <!-- КОНТЕНТ -->
+        <div class="content-panel">
+          
+          <!-- ПАНЕЛЬ ЧАТОВ -->
+          <div id="chatPanel" class="panel active">
+            <div class="chat-list-header">
+              Чаты <span>12 непрочитанных</span>
+            </div>
+            <div class="chat-items">
+              <div class="chat-item">
+                <div class="avatar">A</div>
+                <div class="chat-info">
+                  <div class="chat-name">Alex <span class="time">12:42</span></div>
+                  <div class="chat-message">Привет! Как дела? <span class="badge">2</span></div>
+                </div>
+              </div>
+              <div class="chat-item">
+                <div class="avatar">M</div>
+                <div class="chat-info">
+                  <div class="chat-name">Maria <span class="time">11:20</span></div>
+                  <div class="chat-message">Отправила файлы, посмотри</div>
+                </div>
+              </div>
+              <div class="chat-item">
+                <div class="avatar">D</div>
+                <div class="chat-info">
+                  <div class="chat-name">Design Team <span class="time">Вчера</span></div>
+                  <div class="chat-message">Новый макет готов ✨ <span class="badge">5</span></div>
+                </div>
+              </div>
+              <div class="chat-item">
+                <div class="avatar">W</div>
+                <div class="chat-info">
+                  <div class="chat-name">Wavey Support <span class="time">Вчера</span></div>
+                  <div class="chat-message">Спасибо за отзыв!</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ПАНЕЛЬ ТВИТТЕРА -->
+          <div id="twitterPanel" class="panel">
+            <div class="twitter-content">
+              
+              <!-- Вкладка 1: Общая лента -->
+              <div id="twitterFeedTab" class="twitter-tab active">
+                
+                <!-- Форма для твита -->
+                <div class="tweet-compose">
+                  <div class="compose-top">
+                    <div class="avatar" id="composeAvatar">W</div>
+                    <textarea class="compose-input" id="tweetInput" placeholder="Что происходит?" maxlength="280" rows="2"></textarea>
+                  </div>
+                  <div class="compose-bottom">
+                    <span class="char-count" id="charCount">280</span>
+                    <button class="compose-btn" id="sendTweetBtn" disabled>Твитнуть</button>
+                  </div>
+                </div>
+
+                <!-- Общая лента твитов -->
+                <div class="twitter-feed" id="globalFeed">
+                  <div class="tweet" data-id="t1">
+                    <div class="tweet-avatar">W</div>
+                    <div class="tweet-body">
+                      <div class="tweet-header">
+                        <span class="tweet-user">Wavey</span>
+                        <span class="tweet-handle">@wavey_app · 2 мин</span>
+                      </div>
+                      <div class="tweet-text">Новый дизайн уже в разработке. Чёрно-белая эстетика — наше всё.</div>
+                      <div class="tweet-actions">
+                        <span class="reply-count"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> 0</span>
+                        <span><svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> 12</span>
+                        <span><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> 156</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Вкладка 2: Твой аккаунт (Профиль) -->
+              <div id="twitterProfileTab" class="twitter-tab">
+                
+                <!-- Оверлей для закрытия дропдауна -->
+                <div class="dropdown-overlay" id="dropdownOverlay"></div>
+
+                <div class="profile-view">
+                  <div class="profile-avatar-large" id="profileAvatar">W</div>
+                  
+                  <div class="profile-name-wrapper" id="profileNameWrapper">
+                    <div class="profile-name-large" id="profileName">Wavey User</div>
+                    <div class="profile-chevron" id="profileChevron">
+                      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                  </div>
+
+                  <div class="profile-handle-large" id="profileHandle">@wavey_user</div>
+                  
+                  <div class="profile-stats">
+                    <div class="profile-stat">
+                      <span class="num" id="statFollowing">128</span>
+                      <span class="label">Читаю</span>
+                    </div>
+                    <div class="profile-stat">
+                      <span class="num" id="statFollowers">45</span>
+                      <span class="label">Читатели</span>
+                    </div>
+                  </div>
+
+                  <div class="profile-actions">
+                    <button class="profile-btn">Редактировать профиль</button>
+                  </div>
+
+                  <!-- ВЫПАДАЮЩЕЕ МЕНЮ АККАУНТОВ -->
+                  <div class="account-dropdown" id="accountDropdown">
+                    <div class="account-item active-account" data-avatar="W" data-name="Wavey User" data-handle="@wavey_user" data-following="128" data-followers="45">
+                      <div class="avatar">W</div>
+                      <div class="account-info">
+                        <div class="account-name">Wavey User</div>
+                        <div class="account-handle">@wavey_user</div>
+                      </div>
+                      <div class="account-check">
+                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
+                    </div>
+                    
+                    <div class="account-item" data-avatar="A" data-name="Alex Dev" data-handle="@alex_dev" data-following="450" data-followers="1.2K">
+                      <div class="avatar">A</div>
+                      <div class="account-info">
+                        <div class="account-name">Alex Dev</div>
+                        <div class="account-handle">@alex_dev</div>
+                      </div>
+                      <div class="account-check" style="opacity: 0;">
+                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
+                    </div>
+
+                    <div class="account-item" data-avatar="M" data-name="Maria Design" data-handle="@maria_design" data-following="89" data-followers="3.4K">
+                      <div class="avatar">M</div>
+                      <div class="account-info">
+                        <div class="account-name">Maria Design</div>
+                        <div class="account-handle">@maria_design</div>
+                      </div>
+                      <div class="account-check" style="opacity: 0;">
+                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
+                    </div>
+
+                    <div class="account-divider"></div>
+
+                    <div class="add-account-row">
+                      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <span>Добавить аккаунт</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Блок "Твои твиты" -->
+                <div class="my-tweets-header">
+                  Твои твиты <span id="myTweetsCount">0</span>
+                </div>
+                <div class="my-tweets-list" id="myTweetsList">
+                  <div class="empty-state" id="emptyTweetsMsg">У тебя пока нет твитов</div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Нижнее меню для Твиттера -->
+            <div class="bottom-nav">
+              <div class="nav-item active" id="navTwitterFeed">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="nav-item" id="navTwitterProfile">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- ПАНЕЛЬ КОНТАКТОВ -->
+          <div id="contactsPanel" class="panel">
+            <div class="chat-list-header">
+              Контакты <span>24 всего</span>
+            </div>
+            <div class="contact-items">
+              <div class="contact-item">
+                <div class="avatar">A</div>
+                <div class="chat-info">
+                  <div class="chat-name">Alex</div>
+                  <div class="contact-phone">+7 (999) 123-45-67</div>
+                  <div class="contact-note">Коллега по работе</div>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="avatar">M</div>
+                <div class="chat-info">
+                  <div class="chat-name">Maria</div>
+                  <div class="contact-phone">+7 (888) 765-43-21</div>
+                  <div class="contact-note">Дизайнер</div>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="avatar">D</div>
+                <div class="chat-info">
+                  <div class="chat-name">Design Team</div>
+                  <div class="contact-phone">+7 (495) 000-11-22</div>
+                  <div class="contact-note">Рабочий чат</div>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="avatar">J</div>
+                <div class="chat-info">
+                  <div class="chat-name">John</div>
+                  <div class="contact-phone">+1 (555) 987-65-43</div>
+                  <div class="contact-note">Друг детства</div>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="avatar">S</div>
+                <div class="chat-info">
+                  <div class="chat-name">Sarah</div>
+                  <div class="contact-phone">+44 20 7946 0958</div>
+                  <div class="contact-note">Менеджер</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== ОВЕРЛЕЙ ВЕТКИ (THREAD) ===== -->
+      <div class="thread-overlay" id="threadOverlay">
+        <div class="thread-header">
+          <div class="thread-back-btn" id="threadBackBtn">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
+          <div class="thread-title">Thread</div>
+        </div>
+        
+        <div class="thread-content">
+          
+          <!-- Контейнер для нити (основной твит + добавленные) -->
+          <div class="thread-nodes" id="threadNodes"></div>
+
+          <!-- Единственное поле ввода (внизу) -->
+          <div class="reply-compose" id="replyCompose">
+            <div class="avatar" id="replyAvatar">W</div>
+            <div class="reply-input-wrapper">
+              <textarea class="reply-input" id="replyInput" placeholder="Tweet your reply" maxlength="280" rows="1"></textarea>
+              <button class="reply-btn" id="sendReplyBtn" disabled>Reply</button>
+            </div>
+          </div>
+
+          <!-- Список ответов -->
+          <div class="replies-list" id="repliesList"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // === 1. Переключение главных панелей ===
+      const iconChat = document.getElementById('iconChat');
+      const iconTwitter = document.getElementById('iconTwitter');
+      const iconContacts = document.getElementById('iconContacts');
+      const chatPanel = document.getElementById('chatPanel');
+      const twitterPanel = document.getElementById('twitterPanel');
+      const contactsPanel = document.getElementById('contactsPanel');
+      const allIcons = [iconChat, iconTwitter, iconContacts];
+
+      function switchMainPanel(panelToShow, activeIcon) {
+        chatPanel.classList.remove('active');
+        twitterPanel.classList.remove('active');
+        contactsPanel.classList.remove('active');
+        allIcons.forEach(icon => icon.classList.remove('active'));
+        panelToShow.classList.add('active');
+        activeIcon.classList.add('active');
+      }
+
+      iconChat.addEventListener('click', () => switchMainPanel(chatPanel, iconChat));
+      iconTwitter.addEventListener('click', () => switchMainPanel(twitterPanel, iconTwitter));
+      iconContacts.addEventListener('click', () => switchMainPanel(contactsPanel, iconContacts));
+
+      // === 2. Вкладки внутри Твиттера ===
+      const twitterFeedTab = document.getElementById('twitterFeedTab');
+      const twitterProfileTab = document.getElementById('twitterProfileTab');
+      const navTwitterFeed = document.getElementById('navTwitterFeed');
+      const navTwitterProfile = document.getElementById('navTwitterProfile');
+
+      function switchTwitterTab(tabToShow) {
+        if (tabToShow === 'feed') {
+          twitterFeedTab.classList.add('active');
+          twitterProfileTab.classList.remove('active');
+          navTwitterFeed.classList.add('active');
+          navTwitterProfile.classList.remove('active');
+        } else {
+          twitterProfileTab.classList.add('active');
+          twitterFeedTab.classList.remove('active');
+          navTwitterProfile.classList.add('active');
+          navTwitterFeed.classList.remove('active');
+        }
+      }
+
+      navTwitterFeed.addEventListener('click', () => switchTwitterTab('feed'));
+      navTwitterProfile.addEventListener('click', () => switchTwitterTab('profile'));
+
+      // === 3. Дропдаун смены аккаунта ===
+      const profileNameWrapper = document.getElementById('profileNameWrapper');
+      const profileChevron = document.getElementById('profileChevron');
+      const accountDropdown = document.getElementById('accountDropdown');
+      const dropdownOverlay = document.getElementById('dropdownOverlay');
+      const accountItems = document.querySelectorAll('.account-item');
+      
+      const profileAvatar = document.getElementById('profileAvatar');
+      const profileName = document.getElementById('profileName');
+      const profileHandle = document.getElementById('profileHandle');
+      const statFollowing = document.getElementById('statFollowing');
+      const statFollowers = document.getElementById('statFollowers');
+      const composeAvatar = document.getElementById('composeAvatar');
+      const replyAvatar = document.getElementById('replyAvatar');
+
+      let currentUser = {
+        avatar: 'W',
+        name: 'Wavey User',
+        handle: '@wavey_user'
+      };
+
+      profileNameWrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = accountDropdown.classList.contains('open');
+        if (isOpen) {
+          accountDropdown.classList.remove('open');
+          dropdownOverlay.classList.remove('open');
+          profileChevron.classList.remove('open');
+        } else {
+          accountDropdown.classList.add('open');
+          dropdownOverlay.classList.add('open');
+          profileChevron.classList.add('open');
+        }
+      });
+
+      dropdownOverlay.addEventListener('click', () => {
+        accountDropdown.classList.remove('open');
+        dropdownOverlay.classList.remove('open');
+        profileChevron.classList.remove('open');
+      });
+
+      accountItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          
+          accountItems.forEach(i => {
+            i.querySelector('.account-check').style.opacity = '0';
+            i.classList.remove('active-account');
+          });
+          
+          this.querySelector('.account-check').style.opacity = '1';
+          this.classList.add('active-account');
+
+          profileAvatar.textContent = this.dataset.avatar;
+          profileName.textContent = this.dataset.name;
+          profileHandle.textContent = this.dataset.handle;
+          statFollowing.textContent = this.dataset.following;
+          statFollowers.textContent = this.dataset.followers;
+          
+          currentUser = {
+            avatar: this.dataset.avatar,
+            name: this.dataset.name,
+            handle: this.dataset.handle
+          };
+          composeAvatar.textContent = this.dataset.avatar;
+          replyAvatar.textContent = this.dataset.avatar;
+
+          accountDropdown.classList.remove('open');
+          dropdownOverlay.classList.remove('open');
+          profileChevron.classList.remove('open');
+        });
+      });
+
+      // === 4. Отправка твитов ===
+      const tweetInput = document.getElementById('tweetInput');
+      const sendTweetBtn = document.getElementById('sendTweetBtn');
+      const charCount = document.getElementById('charCount');
+      const globalFeed = document.getElementById('globalFeed');
+      const myTweetsList = document.getElementById('myTweetsList');
+      const myTweetsCount = document.getElementById('myTweetsCount');
+      const emptyTweetsMsg = document.getElementById('emptyTweetsMsg');
+
+      let myTweets = [];
+
+      tweetInput.addEventListener('input', function() {
+        const remaining = 280 - this.value.length;
+        charCount.textContent = remaining;
+        charCount.style.color = remaining < 20 ? '#b88' : '#777';
+        sendTweetBtn.disabled = this.value.trim().length === 0;
+      });
+
+      function createTweetElement(text, user, id, repliesCount = 0) {
+        const div = document.createElement('div');
+        div.className = 'tweet';
+        div.dataset.id = id;
+        div.dataset.userAvatar = user.avatar;
+        div.dataset.userName = user.name;
+        div.dataset.userHandle = user.handle;
+        
+        div.innerHTML = `
+          <div class="tweet-avatar">${user.avatar}</div>
+          <div class="tweet-body">
+            <div class="tweet-header">
+              <span class="tweet-user">${user.name}</span>
+              <span class="tweet-handle">${user.handle} · только что</span>
+            </div>
+            <div class="tweet-text"></div>
+            <div class="tweet-actions">
+              <span class="reply-count"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> ${repliesCount}</span>
+              <span><svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> 0</span>
+              <span><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> 0</span>
+            </div>
+          </div>
+        `;
+        div.querySelector('.tweet-text').textContent = text;
+        return div;
+      }
+
+      sendTweetBtn.addEventListener('click', function() {
+        const text = tweetInput.value.trim();
+        if (!text) return;
+
+        const uniqueId = 'my_' + Date.now();
+        
+        const newGlobalTweet = createTweetElement(text, currentUser, uniqueId);
+        globalFeed.prepend(newGlobalTweet);
+
+        const newMyTweet = createTweetElement(text, currentUser, uniqueId);
+        if (myTweets.length === 0) emptyTweetsMsg.style.display = 'none';
+        myTweetsList.prepend(newMyTweet);
+        myTweets.unshift({ text, user: { ...currentUser }, id: uniqueId });
+
+        myTweetsCount.textContent = myTweets.length;
+
+        tweetInput.value = '';
+        charCount.textContent = '280';
+        charCount.style.color = '#777';
+        sendTweetBtn.disabled = true;
+      });
+
+      // === 5. Ветка твита (Thread) ===
+      const threadOverlay = document.getElementById('threadOverlay');
+      const threadBackBtn = document.getElementById('threadBackBtn');
+      const threadNodes = document.getElementById('threadNodes');
+      const replyInput = document.getElementById('replyInput');
+      const sendReplyBtn = document.getElementById('sendReplyBtn');
+      const repliesList = document.getElementById('repliesList');
+      const replyCompose = document.getElementById('replyCompose');
+
+      let currentThreadId = null;
+      const threadReplies = {}; 
+      const threadChain = {}; 
+
+      // Открытие ветки по клику на твит
+      document.addEventListener('click', function(e) {
+        const tweet = e.target.closest('.tweet');
+        if (!tweet) return;
+        if (e.target.closest('.thread-overlay') || e.target.closest('.account-dropdown')) return;
+
+        openThread(tweet);
+      });
+
+      function openThread(tweetElement) {
+        const id = tweetElement.dataset.id || 'temp_' + Date.now();
+        const avatar = tweetElement.dataset.userAvatar || tweetElement.querySelector('.tweet-avatar')?.textContent || 'W';
+        const name = tweetElement.dataset.userName || tweetElement.querySelector('.tweet-user')?.textContent || 'User';
+        const handle = tweetElement.dataset.userHandle || tweetElement.querySelector('.tweet-handle')?.textContent.split('·')[0].trim() || '@user';
+        const text = tweetElement.querySelector('.tweet-text')?.textContent || '';
+        
+        if (!threadChain[id]) {
+          threadChain[id] = [{ text, avatar, name, handle }];
+        }
+        currentThreadId = id;
+
+        renderThread(id);
+        
+        replyInput.value = '';
+        sendReplyBtn.disabled = true;
+        replyInput.style.height = 'auto';
+
+        threadOverlay.classList.add('open');
+      }
+
+      function renderThread(tweetId) {
+        threadNodes.innerHTML = '';
+        const nodes = threadChain[tweetId] || [];
+
+        nodes.forEach((node, index) => {
+          const isFirst = index === 0;
+          const isLast = index === nodes.length - 1;
+          const div = document.createElement('div');
+          div.className = 'thread-node';
+          
+          // Добавляем линию, если это не последний твит в цепочке
+          if (!isLast) {
+            div.classList.add('line');
+          }
+          
+          if (isFirst) {
+            // Первый твит (полный вид как на скрине)
+            div.innerHTML = `
+              <div class="tweet-avatar">${node.avatar}</div>
+              <div class="thread-node-body">
+                <div class="thread-node-header">
+                  <div class="thread-node-user-info">
+                    <span class="thread-node-name">${node.name}</span>
+                    <span class="thread-node-handle">${node.handle}</span>
+                  </div>
+                  <span class="thread-node-more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
+                </div>
+                <div class="thread-node-text">${escapeHtml(node.text)}</div>
+                <div class="thread-node-date">3:10 PM · Mar 14, 2023 · 5.5M Views</div>
+                <div class="thread-stats-row">
+                  <span><strong>6,121</strong> Retweets</span>
+                  <span><strong>68.4K</strong> Likes</span>
+                </div>
+                <div class="thread-node-actions">
+                  <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </div>
+              </div>
+            `;
+          } else {
+            // Последующие твиты (урезанный вид)
+            div.innerHTML = `
+              <div class="tweet-avatar">${node.avatar}</div>
+              <div class="thread-node-body">
+                <div class="thread-node-header">
+                  <div class="thread-node-user-info">
+                    <span class="thread-node-name">${node.name}</span>
+                    <span class="thread-node-handle">${node.handle} · 28s</span>
+                  </div>
+                  <span class="thread-node-more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>
+                </div>
+                <div class="thread-node-text">${escapeHtml(node.text)}</div>
+                <div class="thread-node-actions" style="padding-right: 0; margin-top: 12px;">
+                  <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </div>
+              </div>
+            `;
+          }
+          threadNodes.appendChild(div);
+        });
+
+        // Перемещаем форму ввода в самый низ
+        threadNodes.after(replyCompose);
+        
+        renderReplies(tweetId);
+      }
+
+      function renderReplies(tweetId) {
+        repliesList.innerHTML = '';
+        const replies = threadReplies[tweetId] || [];
+        
+        if (replies.length > 0) {
+          replies.forEach(reply => {
+            const div = document.createElement('div');
+            div.className = 'tweet';
+            div.innerHTML = `
+              <div class="tweet-avatar">${reply.user.avatar}</div>
+              <div class="tweet-body">
+                <div class="tweet-header">
+                  <span class="tweet-user">${reply.user.name}</span>
+                  <span class="tweet-handle">${reply.user.handle} · только что</span>
+                </div>
+                <div class="tweet-text"></div>
+                <div class="tweet-actions" style="opacity: 0.5;">
+                  <span><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Ответить</span>
+                </div>
+              </div>
+            `;
+            div.querySelector('.tweet-text').textContent = reply.text;
+            repliesList.appendChild(div);
+          });
+        }
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      threadBackBtn.addEventListener('click', () => {
+        threadOverlay.classList.remove('open');
+      });
+
+      replyInput.addEventListener('input', function() {
+        sendReplyBtn.disabled = this.value.trim().length === 0;
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+      });
+
+      // Единственная логика отправки — создает продолжение ветки
+      sendReplyBtn.addEventListener('click', function() {
+        const text = replyInput.value.trim();
+        if (!text || !currentThreadId) return;
+
+        // Добавляем в цепочку твитов автора
+        threadChain[currentThreadId].push({
+          text: text,
+          avatar: currentUser.avatar,
+          name: currentUser.name,
+          handle: currentUser.handle
+        });
+
+        renderThread(currentThreadId);
+
+        replyInput.value = '';
+        replyInput.style.height = 'auto';
+        sendReplyBtn.disabled = true;
+      });
+
+    })();
+  </script>
+</body>
+</html>

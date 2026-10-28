@@ -1,0 +1,1763 @@
+/* ===== Wavey: телефон для ролевой =====
+   Все классы с префиксом wv-, чтобы не пересекаться со стилями таверны (.avatar, .panel и т.п.) */
+
+#wavey-phone,
+#wavey-phone *,
+#wavey-fab {
+    box-sizing: border-box;
+}
+
+#wavey-phone {
+    --wv-bg: #0c0c0c;
+    --wv-bg-deep: #0a0a0a;
+    --wv-line: #1e1e1e;
+    --wv-hover: #161616;
+    --wv-chip: #2c2c2c;
+    --wv-chip-border: #3a3a3a;
+    --wv-text: #f0f0f0;
+    --wv-text-2: #bbb;
+    --wv-muted: #777;
+    --wv-status-h: 42px;
+
+    position: fixed;
+    z-index: 3500;
+    width: 380px;
+    max-width: calc(100vw - 16px);
+    height: min(744px, calc(100dvh - 24px));
+    top: 12px;
+    right: 24px;
+    display: none;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: normal;
+    color: var(--wv-text);
+    text-align: left;
+    text-shadow: none;
+}
+
+#wavey-phone.wv-open {
+    display: block;
+    animation: wv-pop 0.18s ease-out;
+}
+
+@keyframes wv-pop {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+}
+
+#wavey-phone .wv-mockup {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    border-radius: 44px;
+    padding: 12px 8px;
+    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.8), 0 0 0 2px #2a2a2a inset;
+    border: 1px solid #3a3a3a;
+}
+
+#wavey-phone .wv-screen {
+    background: var(--wv-bg);
+    border-radius: 36px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid #1f1f1f;
+    position: relative;
+}
+
+#wavey-phone svg {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#wavey-phone button,
+#wavey-phone textarea {
+    font-family: inherit;
+    margin: 0;
+}
+
+/* --- статус-бар (за него телефон и таскаем) --- */
+#wavey-phone .wv-status-bar {
+    height: var(--wv-status-h);
+    padding: 4px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #aaa;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--wv-line);
+    flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+#wavey-phone .wv-status-bar:active { cursor: grabbing; }
+#wavey-phone .wv-datetime { display: flex; align-items: center; gap: 8px; }
+#wavey-phone .wv-time { color: #e0e0e0; font-weight: 600; }
+#wavey-phone .wv-date { color: #888; font-weight: 400; font-size: 12px; }
+#wavey-phone .wv-status-icons { display: flex; align-items: center; gap: 6px; }
+#wavey-phone .wv-status-icons svg { width: 16px; height: 16px; stroke-width: 1.8; }
+
+/* --- шапка --- */
+#wavey-phone .wv-app-header {
+    padding: 8px 14px 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--wv-line);
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-app-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--wv-text);
+    letter-spacing: -0.3px;
+    font-family: inherit;
+}
+
+#wavey-phone .wv-header-actions { display: flex; gap: 4px; }
+
+#wavey-phone .wv-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #ccc;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.12s, color 0.15s;
+}
+
+
+#wavey-phone .wv-icon-btn svg { width: 20px; height: 20px; }
+
+/* --- раскладка --- */
+#wavey-phone .wv-main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+#wavey-phone .wv-sidebar {
+    width: 68px;
+    background: var(--wv-bg-deep);
+    border-right: 1px solid var(--wv-line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0 20px;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-side-icon {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    color: #7a7a7a;
+    cursor: pointer;
+    transition: color 0.15s;
+    user-select: none;
+    margin-bottom: 4px;
+    position: relative;
+}
+
+#wavey-phone .wv-side-icon svg { width: 24px; height: 24px; }
+
+#wavey-phone .wv-side-icon:hover { color: #aaa; }
+#wavey-phone .wv-side-icon.wv-active { color: #fff; }
+#wavey-phone .wv-spacer { flex: 1; }
+
+#wavey-phone .wv-dot {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #eee;
+    border: 2px solid var(--wv-bg-deep);
+    display: none;
+}
+
+#wavey-phone .wv-dot.wv-show { display: block; }
+
+#wavey-phone .wv-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+#wavey-phone .wv-panel { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+#wavey-phone .wv-panel.wv-active { display: flex; }
+
+#wavey-phone .wv-list-header {
+    padding: 14px 16px 6px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--wv-text-2);
+    letter-spacing: 0.3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-list-header span { color: #888; font-size: 13px; }
+
+/* --- отклик на нажатие: без подложек, только прозрачность --- */
+#wavey-phone .wv-icon-btn,
+#wavey-phone .wv-row,
+#wavey-phone .wv-tweet,
+#wavey-phone .wv-ios-link,
+#wavey-phone [data-wv-toggle],
+#wavey-phone .wv-ios-button,
+#wavey-phone .wv-ios-back,
+#wavey-phone .wv-ios-row[data-account-id],
+#wavey-phone .wv-profile-name-wrap,
+#wavey-phone .wv-profile-btn,
+#wavey-phone .wv-btn,
+#wavey-phone .wv-nav-btn,
+#wavey-phone .wv-field-btn { -webkit-tap-highlight-color: transparent; transition: opacity 0.12s; }
+
+#wavey-phone .wv-icon-btn:active,
+#wavey-phone .wv-row:active,
+#wavey-phone .wv-tweet:active,
+#wavey-phone .wv-ios-link:active,
+#wavey-phone [data-wv-toggle]:active,
+#wavey-phone .wv-ios-button:active,
+#wavey-phone .wv-ios-back:active,
+#wavey-phone .wv-ios-row[data-account-id]:active,
+#wavey-phone .wv-profile-name-wrap:active,
+#wavey-phone .wv-profile-btn:active,
+#wavey-phone .wv-btn:not(:disabled):active,
+#wavey-phone .wv-nav-btn:active,
+#wavey-phone .wv-field-btn:active { opacity: 0.55; }
+
+#wavey-phone .wv-icon-btn:hover,
+#wavey-phone .wv-field-btn:hover,
+#wavey-phone .wv-ios-back:hover { color: #fff; }
+
+/* --- скроллы: листается колесом/свайпом, полос не видно нигде в телефоне --- */
+#wavey-phone .wv-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+}
+
+#wavey-phone,
+#wavey-phone * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+}
+
+#wavey-phone ::-webkit-scrollbar,
+#wavey-phone::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+#wavey-phone .wv-list { padding: 0 8px 8px; }
+
+/* --- элементы списков --- */
+#wavey-phone .wv-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 10px;
+    border-radius: 16px;
+    transition: opacity 0.12s;
+    margin-bottom: 2px;
+}
+
+
+
+#wavey-phone .wv-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--wv-chip) center / cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 20px;
+    color: #e0e0e0;
+    margin-right: 14px;
+    flex-shrink: 0;
+    border: 1px solid var(--wv-chip-border);
+    overflow: hidden;
+    user-select: none;
+}
+
+#wavey-phone .wv-avatar.wv-sm { width: 36px; height: 36px; font-size: 16px; margin-right: 0; }
+#wavey-phone .wv-avatar.wv-md { width: 44px; height: 44px; font-size: 18px; margin-right: 0; }
+#wavey-phone .wv-avatar.wv-lg { width: 80px; height: 80px; font-size: 32px; font-weight: 600; margin: 0 0 16px; border-width: 2px; }
+
+#wavey-phone .wv-info { flex: 1; min-width: 0; }
+
+#wavey-phone .wv-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--wv-text);
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#wavey-phone .wv-name > b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-name .wv-ts { font-size: 12px; font-weight: 400; color: var(--wv-muted); flex-shrink: 0; }
+
+#wavey-phone .wv-preview {
+    font-size: 13px;
+    color: #9a9a9a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#wavey-phone .wv-preview > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#wavey-phone .wv-badge {
+    background: #3a3a3a;
+    color: #fff;
+    border-radius: 20px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-contact-note {
+    font-size: 12px;
+    color: #666;
+    margin-top: 3px;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#wavey-phone .wv-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: #666;
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* --- твиттер --- */
+#wavey-phone .wv-tab { display: none; flex-direction: column; }
+#wavey-phone .wv-tab.wv-active { display: flex; }
+
+#wavey-phone .wv-compose {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--wv-line);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#wavey-phone .wv-compose-top { display: flex; gap: 10px; }
+
+#wavey-phone .wv-input {
+    flex: 1;
+    background: var(--wv-hover);
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #eee;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    min-height: 60px;
+    min-width: 0;
+    transition: border-color 0.15s;
+}
+
+#wavey-phone .wv-input:focus { border-color: #444; }
+#wavey-phone .wv-input::placeholder,
+#wavey-phone .wv-reply-input::placeholder { color: #666; }
+
+#wavey-phone .wv-compose-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+#wavey-phone .wv-char-count { font-size: 12px; color: var(--wv-muted); margin-right: auto; }
+#wavey-phone .wv-char-count.wv-warn { color: #eee; font-weight: 600; }
+
+#wavey-phone .wv-btn {
+    background: #eee;
+    color: #000;
+    border: none;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.12s;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-btn { background: #eee !important; color: #000 !important; border: none !important; }
+
+#wavey-phone .wv-btn:disabled { opacity: 0.4; cursor: default; }
+
+#wavey-phone .wv-feed { padding: 12px 14px; display: flex; flex-direction: column; gap: 16px; }
+
+#wavey-phone .wv-tweet {
+    display: block;
+    border-bottom: 1px solid var(--wv-line);
+    padding-bottom: 16px;
+    cursor: pointer;
+    transition: opacity 0.12s;
+}
+
+
+#wavey-phone .wv-tweet-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; min-width: 0; }
+#wavey-phone .wv-tweet-head .wv-tweet-header { margin-bottom: 0; min-width: 0; }
+#wavey-phone [data-wv-author] { cursor: pointer; }
+#wavey-phone .wv-header-end { margin-left: auto; }
+#wavey-phone .wv-tweet-header { display: flex; flex-direction: column; margin-bottom: 4px; }
+#wavey-phone .wv-tweet-user { font-weight: 600; color: #eee; font-size: 15px; line-height: 1.2; }
+#wavey-phone .wv-tweet-handle { color: var(--wv-muted); font-size: 14px; }
+
+#wavey-phone .wv-tweet-text {
+    color: #ddd;
+    font-size: 15px;
+    line-height: 1.45;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#wavey-phone .wv-tweet-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 4px;
+    color: var(--wv-muted);
+    font-size: 13px;
+}
+
+#wavey-phone .wv-tweet-actions span { display: flex; align-items: center; gap: 5px; }
+#wavey-phone .wv-tweet-actions span:hover { color: var(--wv-text-2); }
+#wavey-phone .wv-tweet-actions svg { width: 18px; height: 18px; }
+#wavey-phone .wv-tweet-actions .wv-liked { color: #e0e0e0; }
+#wavey-phone .wv-tweet-actions .wv-liked svg { fill: currentColor; }
+
+/* --- профиль --- */
+#wavey-phone .wv-profile {
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    border-bottom: 1px solid var(--wv-line);
+}
+
+#wavey-phone .wv-profile-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+}
+
+
+#wavey-phone .wv-profile-name { font-size: 20px; font-weight: 600; color: var(--wv-text); }
+#wavey-phone .wv-chevron { display: flex; color: var(--wv-muted); transition: transform 0.2s; }
+#wavey-phone .wv-chevron svg { width: 18px; height: 18px; }
+#wavey-phone .wv-profile-handle { color: var(--wv-muted); font-size: 14px; margin-bottom: 16px; }
+#wavey-phone .wv-stats { display: flex; gap: 24px; margin-bottom: 24px; }
+#wavey-phone .wv-stat { display: flex; flex-direction: column; gap: 2px; }
+#wavey-phone .wv-stat .wv-num { font-weight: 600; color: #eee; font-size: 16px; }
+#wavey-phone .wv-stat .wv-label { color: var(--wv-muted); font-size: 12px; }
+
+#wavey-phone .wv-profile-btn {
+    padding: 8px 24px;
+    border-radius: 20px;
+    background: transparent;
+    color: #eee;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid #3a3a3a;
+    cursor: pointer;
+}
+
+
+
+#wavey-phone .wv-section-header {
+    padding: 16px 16px 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--wv-text-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--wv-line);
+}
+
+#wavey-phone .wv-section-header span { color: #666; font-size: 12px; font-weight: 400; }
+
+/* --- шторка снизу (выбор аккаунта) --- */
+#wavey-phone .wv-sheet-backdrop {
+    position: absolute;
+    inset: var(--wv-status-h) 0 0;
+    z-index: 120;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+}
+
+#wavey-phone .wv-sheet-backdrop.wv-open { opacity: 1; pointer-events: auto; }
+
+#wavey-phone .wv-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 121;
+    max-height: 75%;
+    overflow-y: auto;
+    padding: 8px 12px 18px;
+    background: var(--wv-bg);
+    border-top: 1px solid var(--wv-line);
+    border-radius: 22px 22px 0 0;
+    transform: translateY(105%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+#wavey-phone .wv-sheet.wv-open { transform: none; }
+#wavey-phone .wv-sheet-grabber { width: 36px; height: 5px; border-radius: 3px; background: #333; margin: 0 auto 10px; }
+#wavey-phone .wv-sheet-title { font-size: 15px; font-weight: 600; color: var(--wv-text); text-align: center; margin-bottom: 12px; }
+#wavey-phone .wv-sheet .wv-ios-group { margin-bottom: 10px; }
+
+#wavey-phone .wv-account-row { min-height: 54px; cursor: pointer; }
+#wavey-phone .wv-account-row + .wv-account-row::before { left: 56px; }
+#wavey-phone .wv-account-row .wv-avatar { width: 34px; height: 34px; font-size: 15px; }
+#wavey-phone .wv-account-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#wavey-phone .wv-account-name { font-size: 14px; font-weight: 500; color: #eee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-account-handle { font-size: 12px; color: var(--wv-muted); }
+#wavey-phone .wv-check { display: flex; color: #eee; opacity: 0; transition: opacity 0.15s; }
+#wavey-phone .wv-check.wv-on { opacity: 1; }
+#wavey-phone .wv-check svg { width: 17px; height: 17px; stroke-width: 2.4; }
+
+/* --- экран поверх приложения (редактор аккаунта и т.п.) --- */
+#wavey-phone .wv-screen-page {
+    position: absolute;
+    inset: var(--wv-status-h) 0 0;
+    z-index: 130;
+    display: flex;
+    flex-direction: column;
+    background: var(--wv-bg);
+    transform: translateY(100%);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.32s;
+    visibility: hidden;
+}
+
+#wavey-phone .wv-screen-page.wv-open { transform: none; visibility: visible; }
+
+#wavey-phone .wv-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 50px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--wv-line);
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-navbar-title { font-size: 15px; font-weight: 600; color: var(--wv-text); text-align: center; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-nav-btn { font-size: 15px; color: #999; cursor: pointer; user-select: none; min-width: 60px; }
+#wavey-phone .wv-nav-btn:hover { color: #fff; }
+#wavey-phone .wv-nav-btn.wv-nav-strong { color: #fff; font-weight: 600; text-align: right; }
+#wavey-phone .wv-nav-btn.wv-disabled { color: #444; pointer-events: none; }
+
+#wavey-phone .wv-editor-avatar { display: flex; justify-content: center; padding: 22px 0 18px; }
+#wavey-phone .wv-editor-avatar .wv-avatar { margin: 0; }
+
+#wavey-phone .wv-handle-field { display: flex; align-items: center; gap: 0; position: relative; }
+#wavey-phone .wv-handle-field span { position: absolute; left: 10px; top: 50%; transform: translateY(-52%); line-height: 1; z-index: 1; color: #666; font-size: 13px; pointer-events: none; }
+#wavey-phone .wv-handle-field .wv-field { padding-left: 24px !important; }
+
+/* --- нижняя навигация твиттера --- */
+#wavey-phone .wv-bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 6px;
+    border-top: 1px solid var(--wv-line);
+    color: var(--wv-muted);
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 4px 16px;
+    transition: color 0.15s;
+}
+
+#wavey-phone .wv-nav-item:hover { color: #aaa; }
+#wavey-phone .wv-nav-item svg { width: 20px; height: 20px; }
+#wavey-phone .wv-nav-item.wv-active { color: #ddd; }
+
+
+/* --- ветка --- */
+#wavey-phone .wv-thread {
+    position: absolute;
+    inset: var(--wv-status-h) 0 0;
+    background: var(--wv-bg);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+}
+
+#wavey-phone .wv-thread.wv-open { display: flex; }
+
+#wavey-phone .wv-thread-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--wv-line);
+    flex-shrink: 0;
+    gap: 16px;
+}
+
+#wavey-phone .wv-thread-title { font-size: 17px; font-weight: 600; color: #eee; }
+
+#wavey-phone .wv-node { display: flex; gap: 12px; padding: 16px; position: relative; }
+
+#wavey-phone .wv-node.wv-line::before {
+    content: '';
+    position: absolute;
+    left: 37px;
+    top: 64px;
+    bottom: -16px;
+    width: 2px;
+    background: #333;
+}
+
+#wavey-phone .wv-node .wv-avatar { position: relative; z-index: 2; border: 2px solid var(--wv-bg); }
+#wavey-phone .wv-node-body { flex: 1; min-width: 0; }
+#wavey-phone .wv-node-text { color: #eee; font-size: 16px; line-height: 1.45; margin-bottom: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+#wavey-phone .wv-node-date { color: var(--wv-muted); font-size: 14px; margin-bottom: 12px; }
+
+#wavey-phone .wv-stats-row {
+    display: flex;
+    gap: 16px;
+    color: var(--wv-muted);
+    font-size: 14px;
+    padding: 12px 0;
+    border-top: 1px solid var(--wv-line);
+    border-bottom: 1px solid var(--wv-line);
+    margin-bottom: 12px;
+}
+
+#wavey-phone .wv-stats-row strong { color: #ddd; font-weight: 600; }
+
+#wavey-phone .wv-reply-compose {
+    padding: 12px 14px 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    border-top: 1px solid var(--wv-line);
+    background: var(--wv-bg);
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-reply-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--wv-hover);
+    border: 1px solid #2a2a2a;
+    border-radius: 24px;
+    padding: 4px 6px 4px 16px;
+    min-width: 0;
+}
+
+#wavey-phone .wv-reply-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #eee;
+    font-size: 15px;
+    outline: none;
+    resize: none;
+    height: 24px;
+    max-height: 120px;
+    min-height: 0;
+    padding: 2px 0 0;
+    margin: 0;
+    min-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-y: hidden;
+}
+
+#wavey-phone .wv-reply-input:focus { outline: none; box-shadow: none; }
+
+/* темы таверны любят красить textarea с !important — перебиваем */
+#wavey-phone .wv-reply-input { border: none !important; background: transparent !important; }
+#wavey-phone .wv-input { border: 1px solid #2a2a2a !important; background: var(--wv-hover) !important; }
+#wavey-phone .wv-input:focus { border-color: #444 !important; }
+
+/* ===== плавающая кнопка ===== */
+#wavey-fab {
+    position: fixed;
+    z-index: 3400;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: #0c0c0c;
+    border: 1px solid #3a3a3a;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+    color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    transition: transform 0.15s, opacity 0.15s;
+    opacity: 0.85;
+}
+
+#wavey-fab:hover { opacity: 1; transform: scale(1.05); }
+#wavey-fab.wv-hidden { display: none; }
+#wavey-fab svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+
+#wavey-fab .wv-fab-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #eee;
+    border: 2px solid #0c0c0c;
+    display: none;
+}
+
+#wavey-fab .wv-fab-dot.wv-show { display: block; }
+
+/* на телефонах — почти во весь экран */
+/* --- главный твит в ветке: всё под аватаркой на всю ширину --- */
+#wavey-phone .wv-main-tweet { padding: 16px 16px 4px; border-bottom: 1px solid var(--wv-line); }
+#wavey-phone .wv-main-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+#wavey-phone .wv-main-head .wv-tweet-header { margin-bottom: 0; min-width: 0; }
+#wavey-phone .wv-main-tweet .wv-node-text { font-size: 17px; }
+#wavey-phone .wv-node-date strong { color: #ddd; font-weight: 600; }
+
+#wavey-phone .wv-main-actions {
+    display: flex;
+    justify-content: space-around;
+    color: var(--wv-muted);
+    padding-bottom: 10px;
+}
+
+#wavey-phone .wv-main-actions span { display: flex; padding: 6px; cursor: pointer; transition: color 0.15s; }
+#wavey-phone .wv-main-actions span:hover { color: #ccc; }
+
+#wavey-phone .wv-main-actions svg { width: 20px; height: 20px; }
+#wavey-phone .wv-main-actions .wv-liked { color: #e0e0e0; }
+#wavey-phone .wv-main-actions .wv-liked svg { fill: currentColor; }
+#wavey-phone .wv-reply-text { font-size: 15px; margin-bottom: 0; }
+
+/* ===== настройки: раскладка iOS, палитра wavey (монохром) ===== */
+#wavey-phone .wv-ios { position: relative; height: 100%; overflow: hidden; }
+
+#wavey-phone .wv-ios-page {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--wv-bg);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.28s;
+    visibility: hidden;
+}
+
+#wavey-phone .wv-ios-page[data-wv-page="main"] { transform: translateX(-30%); }
+#wavey-phone .wv-ios-page.wv-active { transform: none; visibility: visible; }
+
+#wavey-phone .wv-ios-scroll { padding: 0 12px 16px; display: flex; flex-direction: column; }
+#wavey-phone .wv-ios-large-title { font-size: 26px; font-weight: 700; color: var(--wv-text); letter-spacing: -0.4px; padding: 14px 4px 10px; }
+
+#wavey-phone .wv-ios-group {
+    background: #141414;
+    border: 1px solid var(--wv-line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-ios-gap { margin-top: 6px; margin-bottom: 6px; }
+
+/* Wavey ID — без подложки, прямо на фоне */
+#wavey-phone .wv-ios-id { display: flex; align-items: center; gap: 14px; padding: 4px 4px 14px; flex-shrink: 0; }
+#wavey-phone .wv-avatar.wv-id-avatar { width: 56px; height: 56px; font-size: 22px; margin: 0; }
+#wavey-phone .wv-id-info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#wavey-phone .wv-id-name { font-size: 17px; font-weight: 600; color: var(--wv-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-id-mail { font-size: 13px; color: #8a8a8a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-id-sub { font-size: 11px; color: #555; letter-spacing: 0.3px; }
+
+/* версия — подпись внизу по центру */
+#wavey-phone .wv-ios-version {
+    margin-top: auto;
+    padding-top: 18px;
+    text-align: center;
+    font-size: 11px;
+    color: #4a4a4a;
+    letter-spacing: 1.5px;
+    text-transform: lowercase;
+}
+
+/* строки */
+#wavey-phone .wv-ios-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0 12px 0 10px;
+    position: relative;
+    user-select: none;
+    transition: opacity 0.12s;
+}
+
+#wavey-phone .wv-ios-row + .wv-ios-row::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 46px;
+    right: 0;
+    height: 1px;
+    background: var(--wv-line);
+}
+
+#wavey-phone .wv-ios-link,
+#wavey-phone [data-wv-toggle] { cursor: pointer; }
+
+#wavey-phone .wv-ios-label { flex: 1; font-size: 14px; color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#wavey-phone .wv-ios-value { font-size: 13px; color: #777; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-ios-chevron { display: flex; color: #4a4a4a; margin-left: -4px; }
+#wavey-phone .wv-ios-chevron svg { width: 15px; height: 15px; stroke-width: 2.5; }
+
+#wavey-phone .wv-ios-tile {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #222;
+    border: 1px solid #2e2e2e;
+    color: #ddd;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-ios-tile svg { width: 15px; height: 15px; stroke-width: 2; }
+
+/* переключатель (компактный) */
+#wavey-phone .wv-switch {
+    width: 36px;
+    height: 21px;
+    border-radius: 11px;
+    background: #2a2a2a;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+#wavey-phone .wv-switch span {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #777;
+    transition: transform 0.2s, background 0.2s;
+}
+
+#wavey-phone .wv-switch.wv-on { background: #e8e8e8; }
+#wavey-phone .wv-switch.wv-on span { transform: translateX(15px); background: #0c0c0c; }
+
+/* навбар подстраницы: только «назад», заголовок — крупный в контенте */
+#wavey-phone .wv-ios-navbar {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-ios-back {
+    display: flex;
+    align-items: center;
+    color: #bbb;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px 8px 6px 2px;
+    border-radius: 8px;
+    user-select: none;
+    min-width: 0;
+    transition: color 0.15s, background 0.15s;
+}
+
+
+#wavey-phone .wv-ios-back svg { width: 20px; height: 20px; stroke-width: 2.2; flex-shrink: 0; }
+#wavey-phone .wv-ios-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-ios-page-title { padding-top: 0; padding-bottom: 4px; }
+
+#wavey-phone .wv-ios-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 10px 12px 7px;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-ios-footer { font-size: 12px; color: #666; line-height: 1.4; padding: 0 12px; margin-top: -8px; margin-bottom: 14px; flex-shrink: 0; }
+#wavey-phone .wv-segmented + .wv-ios-footer { margin-top: 7px; }
+#wavey-phone .wv-ios-footer:empty { display: none; }
+
+/* поля внутри карточки */
+#wavey-phone .wv-ios-field { display: block; padding: 10px 12px; position: relative; }
+
+#wavey-phone .wv-ios-field + .wv-ios-field::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 12px;
+    right: 0;
+    height: 1px;
+    background: var(--wv-line);
+}
+
+#wavey-phone .wv-ios-field-label { display: block; font-size: 12px; color: #777; margin-bottom: 6px; }
+#wavey-phone .wv-field-row { display: flex; gap: 6px; align-items: center; }
+#wavey-phone .wv-field-row > :first-child { flex: 1; min-width: 0; }
+
+#wavey-phone .wv-field,
+#wavey-phone .wv-select {
+    width: 100%;
+    height: 36px;
+    margin: 0;
+    padding: 0 10px !important;
+    font-family: inherit;
+    font-size: 13px;
+    color: #eee !important;
+    background: #1c1c1c !important;
+    border: 1px solid #262626 !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+    outline: none;
+    min-height: 0;
+}
+
+#wavey-phone .wv-field:focus,
+#wavey-phone .wv-select:focus { border-color: #4a4a4a !important; }
+#wavey-phone .wv-field::placeholder { color: #555; }
+#wavey-phone .wv-select { cursor: pointer; text-overflow: ellipsis; }
+#wavey-phone .wv-select:disabled { opacity: 0.5; cursor: default; }
+#wavey-phone .wv-select option { background: #141414; color: #eee; }
+
+#wavey-phone .wv-field-btn { width: 36px; height: 36px; border-radius: 9px; background: #1c1c1c; border: 1px solid #262626; color: #bbb; opacity: 1; flex-shrink: 0; }
+
+#wavey-phone .wv-field-btn svg { width: 16px; height: 16px; }
+#wavey-phone .wv-spin svg { animation: wv-rotate 0.8s linear infinite; }
+
+@keyframes wv-rotate { to { transform: rotate(360deg); } }
+
+#wavey-phone .wv-segmented {
+    display: flex;
+    background: #141414;
+    border: 1px solid var(--wv-line);
+    border-radius: 11px;
+    padding: 3px;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-seg {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #777;
+    padding: 6px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+#wavey-phone .wv-seg:hover { color: #ccc; }
+#wavey-phone .wv-seg.wv-active { background: #2a2a2a; color: #fff; }
+
+#wavey-phone .wv-ios-button { justify-content: center; color: #eee; font-size: 14px; font-weight: 500; cursor: pointer; }
+#wavey-phone .wv-ios-button.wv-busy { opacity: 0.5; pointer-events: none; }
+
+#wavey-phone .wv-status { text-align: center; overflow-wrap: anywhere; margin-top: 0; }
+#wavey-phone .wv-status.wv-ok { color: #ccc; }
+#wavey-phone .wv-status.wv-error { color: #eee; }
+
+@media (max-width: 500px) {
+    #wavey-phone {
+        width: calc(100vw - 16px);
+        height: calc(100dvh - 16px);
+        top: 8px !important;
+        left: 8px !important;
+        right: auto;
+    }
+
+    #wavey-phone .wv-mockup { border-radius: 36px; padding: 8px 6px; }
+    #wavey-phone .wv-screen { border-radius: 30px; }
+    #wavey-phone .wv-status-bar { cursor: default; }
+}
+
+/* ===== контакты ===== */
+#wavey-phone .wv-header-tools { display: flex; gap: 2px; margin-right: -6px; }
+#wavey-phone .wv-header-tools .wv-icon-btn { width: 30px; height: 30px; }
+#wavey-phone .wv-header-tools .wv-icon-btn svg { width: 18px; height: 18px; }
+
+#wavey-phone .wv-list-status { font-size: 12px; color: #777; padding: 0 16px 6px; line-height: 1.4; }
+#wavey-phone .wv-list-status:empty { display: none; }
+#wavey-phone .wv-list-status.wv-ok { color: #ccc; }
+#wavey-phone .wv-list-status.wv-error { color: #eee; }
+
+#wavey-phone .wv-list-divider { height: 1px; background: var(--wv-line); margin: 6px 10px; }
+#wavey-phone .wv-empty-hint { font-style: normal; font-size: 13px; line-height: 1.5; padding: 24px 18px; }
+#wavey-phone .wv-name .wv-ts { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
+
+#wavey-phone .wv-card-badge { text-align: center; font-size: 11px; color: #666; letter-spacing: 0.6px; text-transform: uppercase; margin: -8px 0 14px; }
+#wavey-phone .wv-card-badge:empty { display: none; }
+
+#wavey-phone .wv-textarea {
+    height: auto !important;
+    min-height: 72px !important;
+    padding: 9px 10px !important;
+    line-height: 1.45;
+    resize: none;
+    display: block;
+}
+
+#wavey-phone .wv-field-pair { display: flex; gap: 10px; }
+#wavey-phone .wv-field-pair label { flex: 1; min-width: 0; }
+#wavey-phone .wv-field::-webkit-outer-spin-button,
+#wavey-phone .wv-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#wavey-phone .wv-field[type="number"] { -moz-appearance: textfield; }
+
+/* ===== экран чата ===== */
+#wavey-phone .wv-screen-page.wv-push { transform: translateX(100%); z-index: 125; }
+#wavey-phone .wv-screen-page.wv-push.wv-open { transform: none; }
+
+#wavey-phone .wv-chat-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 54px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--wv-line);
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-chat-head { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer; }
+#wavey-phone .wv-chat-head .wv-avatar { width: 34px; height: 34px; font-size: 15px; }
+#wavey-phone .wv-chat-head-text { min-width: 0; display: flex; flex-direction: column; }
+#wavey-phone .wv-chat-head-name { font-size: 15px; font-weight: 600; color: var(--wv-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-chat-head-sub { font-size: 12px; color: var(--wv-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#wavey-phone .wv-chat-body { padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+
+#wavey-phone .wv-chat-empty {
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--wv-muted);
+    font-size: 13px;
+}
+
+#wavey-phone .wv-chat-empty b { color: var(--wv-text); font-size: 16px; font-weight: 600; }
+#wavey-phone .wv-chat-empty .wv-avatar { margin-bottom: 10px; }
+
+#wavey-phone .wv-chat-day { align-self: center; font-size: 11px; color: #666; margin: 12px 0 6px; }
+
+#wavey-phone .wv-bubble-row { display: flex; flex-direction: column; max-width: 78%; }
+#wavey-phone .wv-bubble-row.wv-from-user { align-self: flex-end; align-items: flex-end; }
+#wavey-phone .wv-bubble-row.wv-from-contact { align-self: flex-start; align-items: flex-start; }
+
+#wavey-phone .wv-bubble {
+    padding: 8px 12px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#wavey-phone .wv-from-user .wv-bubble { background: #e8e8e8; color: #0c0c0c; }
+#wavey-phone .wv-from-contact .wv-bubble { background: #1c1c1c; color: #eee; border: 1px solid #262626; }
+#wavey-phone .wv-from-user .wv-bubble.wv-tail { border-bottom-right-radius: 6px; }
+#wavey-phone .wv-from-contact .wv-bubble.wv-tail { border-bottom-left-radius: 6px; }
+#wavey-phone .wv-bubble-time { font-size: 10px; color: #555; margin: 3px 6px 6px; }
+
+#wavey-phone .wv-chat-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px 14px;
+    border-top: 1px solid var(--wv-line);
+    flex-shrink: 0;
+}
+
+#wavey-phone .wv-chat-input {
+    flex: 1;
+    min-width: 0;
+    min-height: 36px !important;
+    max-height: 110px;
+    padding: 8px 14px !important;
+    margin: 0;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.35;
+    color: #eee !important;
+    background: #141414 !important;
+    border: 1px solid #262626 !important;
+    border-radius: 18px !important;
+    box-shadow: none !important;
+    outline: none;
+    resize: none;
+}
+
+#wavey-phone .wv-chat-input:focus { border-color: #3a3a3a !important; }
+#wavey-phone .wv-chat-input::placeholder { color: #555; }
+
+#wavey-phone .wv-send {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #262626;
+    color: #666;
+    flex-shrink: 0;
+    cursor: default;
+    transition: background 0.15s, color 0.15s, opacity 0.12s;
+}
+
+#wavey-phone .wv-send svg { width: 18px; height: 18px; stroke-width: 2.5; }
+#wavey-phone .wv-send.wv-ready { background: #e8e8e8; color: #0c0c0c; cursor: pointer; }
+#wavey-phone .wv-send.wv-ready:active { opacity: 0.55; }
+
+/* ===== группы ===== */
+#wavey-phone .wv-group-avatar { color: #bbb; }
+#wavey-phone .wv-group-avatar svg { width: 46%; height: 46%; stroke-width: 1.8; }
+#wavey-phone .wv-bubble-sender { font-size: 11px; color: #777; margin: 6px 0 3px 12px; }
+
+/* ===== ответы контактов ===== */
+#wavey-phone .wv-preview i { font-style: italic; color: #aaa; }
+
+#wavey-phone .wv-bubble.wv-typing { display: flex; gap: 4px; padding: 12px 14px; }
+#wavey-phone .wv-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #777;
+    animation: wv-typing 1.2s infinite ease-in-out;
+}
+#wavey-phone .wv-typing span:nth-child(2) { animation-delay: 0.15s; }
+#wavey-phone .wv-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes wv-typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+}
+
+#wavey-phone .wv-chat-error { align-self: center; font-size: 12px; color: #888; margin-top: 10px; cursor: pointer; }
+#wavey-phone .wv-chat-error u { color: #eee; text-decoration: none; font-weight: 500; }
+#wavey-phone .wv-chat-error:active { opacity: 0.55; }
+
+/* ===== счётчик в настройках ===== */
+#wavey-phone .wv-stepper { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+#wavey-phone .wv-stepper-btn {
+    width: 28px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    color: #ddd;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.12s, color 0.15s;
+}
+#wavey-phone .wv-stepper-btn:active { opacity: 0.5; }
+#wavey-phone .wv-stepper-btn.wv-disabled { color: #3a3a3a; pointer-events: none; }
+#wavey-phone .wv-stepper-value { min-width: 34px; text-align: center; font-size: 13px; color: #aaa; font-variant-numeric: tabular-nums; }
+
+/* ===== уведомление-баннер ===== */
+#wavey-phone .wv-banner {
+    position: absolute;
+    top: calc(var(--wv-status-h) + 6px);
+    left: 8px;
+    right: 8px;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(28, 28, 28, 0.96);
+    border: 1px solid #2e2e2e;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    transform: translateY(-140%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s;
+}
+
+#wavey-phone .wv-banner.wv-open { transform: none; opacity: 1; pointer-events: auto; }
+#wavey-phone .wv-banner:active { opacity: 0.7; }
+#wavey-phone .wv-banner .wv-avatar { width: 34px; height: 34px; font-size: 15px; margin: 0; }
+#wavey-phone .wv-banner-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#wavey-phone .wv-banner-text b { font-size: 13px; color: #fff; font-weight: 600; }
+#wavey-phone .wv-banner-text span { font-size: 13px; color: #bbb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== переписки в сообщениях ролевой =====
+   Классы внутри .mes_text таверна переименовывает в custom-*, поэтому стили — под них. */
+.mes_text .custom-wvc-window {
+    max-width: 380px;
+    /* по центру сообщения */
+    margin: 14px auto;
+    background: #0c0c0c;
+    border: 1px solid #1e1e1e;
+    border-radius: 20px;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-style: normal;
+    text-shadow: none;
+    color: #eee;
+}
+
+.mes_text .custom-wvc-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #1e1e1e;
+}
+
+.mes_text .custom-wvc-ava {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2c2c2c;
+    border: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #e0e0e0;
+    flex-shrink: 0;
+}
+
+.mes_text .custom-wvc-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.mes_text .custom-wvc-title b { font-size: 14px; font-weight: 600; color: #f0f0f0; }
+.mes_text .custom-wvc-title span { font-size: 11px; color: #777; }
+
+.mes_text .custom-wvc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 12px 12px 10px;
+    /* фиксированная высота: длинная переписка листается внутри окошка */
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.mes_text .custom-wvc-body::-webkit-scrollbar { display: none; }
+.mes_text .custom-wvc-row { display: flex; flex-direction: column; max-width: 80%; }
+.mes_text .custom-wvc-row.custom-wvc-right { align-self: flex-end; align-items: flex-end; }
+.mes_text .custom-wvc-row.custom-wvc-left { align-self: flex-start; align-items: flex-start; }
+.mes_text .custom-wvc-sender { font-size: 10px; color: #777; margin: 4px 0 2px 10px; }
+
+.mes_text .custom-wvc-bubble {
+    padding: 7px 12px;
+    border-radius: 17px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.mes_text .custom-wvc-right .custom-wvc-bubble { background: #e8e8e8; color: #0c0c0c; }
+.mes_text .custom-wvc-left .custom-wvc-bubble { background: #1c1c1c; color: #eee; border: 1px solid #262626; }
+
+/* поле ответа — добавляется скриптом, без префикса custom- */
+.mes_text .wavey-inchat-composer { padding: 0 10px 10px; }
+.mes_text .wavey-inchat-typing { display: flex; gap: 4px; padding: 0 4px 8px; }
+.mes_text .wavey-inchat-typing:empty { display: none; }
+.mes_text .wavey-inchat-typing span { width: 6px; height: 6px; border-radius: 50%; background: #777; animation: wv-typing 1.2s infinite ease-in-out; }
+.mes_text .wavey-inchat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.mes_text .wavey-inchat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+.mes_text .wavey-inchat-row { display: flex; align-items: flex-end; gap: 8px; }
+
+.mes_text .wavey-inchat-row textarea {
+    flex: 1;
+    min-width: 0;
+    min-height: 34px !important;
+    max-height: 120px;
+    margin: 0;
+    padding: 7px 14px !important;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.35;
+    color: #eee !important;
+    background: #141414 !important;
+    border: 1px solid #262626 !important;
+    border-radius: 17px !important;
+    box-shadow: none !important;
+    outline: none;
+    resize: none;
+}
+
+.mes_text .wavey-inchat-row textarea:focus { border-color: #3a3a3a !important; }
+.mes_text .wavey-inchat-row textarea::placeholder { color: #555; }
+
+.mes_text .wavey-inchat-send {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #262626;
+    color: #666;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s, opacity 0.12s;
+}
+
+.mes_text .wavey-inchat-send svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.mes_text .wavey-inchat-send.wavey-ready { background: #e8e8e8; color: #0c0c0c; cursor: pointer; }
+.mes_text .wavey-inchat-send.wavey-ready:active { opacity: 0.55; }
+
+/* ===== твиттер: тренды ===== */
+#wavey-phone .wv-trend { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; margin-bottom: 4px; }
+#wavey-phone .wv-trend svg { width: 12px; height: 12px; stroke-width: 2; }
+#wavey-phone .wv-main-tweet .wv-trend { margin-bottom: 10px; }
+
+/* ===== «горячая новость» под сообщением ролевой ===== */
+.mes_block .wavey-buzz-card {
+    /* внутри тела сообщения, под текстом — по центру, не зависит от выравнивания темы */
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 380px;
+    margin: 14px auto 6px;
+    text-align: left;
+    line-height: normal;
+    padding: 10px 12px 12px;
+    background: #0c0c0c;
+    border: 1px solid #1e1e1e;
+    border-radius: 18px;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-style: normal;
+    text-shadow: none;
+    color: #eee;
+    cursor: pointer;
+    transition: opacity 0.12s, border-color 0.15s;
+}
+
+.mes_block .wavey-buzz-card:hover { border-color: #2e2e2e; }
+.mes_block .wavey-buzz-card:active { opacity: 0.6; }
+
+.mes_block .wavey-buzz-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #777;
+    margin: 0 0 8px 2px;
+}
+
+.mes_block .wavey-buzz-tweet { display: flex; gap: 10px; }
+
+.mes_block .wavey-buzz-ava {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #2c2c2c;
+    border: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #e0e0e0;
+    flex-shrink: 0;
+}
+
+.mes_block .wavey-buzz-body { min-width: 0; flex: 1; }
+.mes_block .wavey-buzz-head { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; line-height: 1.3; }
+.mes_block .wavey-buzz-head b { font-size: 14px; font-weight: 600; color: #f0f0f0; }
+.mes_block .wavey-buzz-head span { font-size: 12px; color: #777; }
+.mes_block .wavey-buzz-text { font-size: 14px; line-height: 1.45; color: #ddd; margin: 3px 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mes_block .wavey-buzz-stats { display: flex; gap: 14px; font-size: 12px; color: #777; }
+
+/* недоставленное сообщение в окошке переписки */
+.mes_text .wavey-inchat-failed { font-size: 11px; color: #999; text-align: center; padding: 0 4px 8px; line-height: 1.4; }
+.mes_text .wavey-inchat-failed:empty { display: none; }
+
+/* «Доставлено» / «Прочитано» */
+#wavey-phone .wv-receipt { align-self: flex-end; font-size: 10px; color: #666; margin: -2px 6px 4px; }
+.mes_text .wavey-inchat-receipt { text-align: right; font-size: 10px; color: #666; padding: 0 6px 6px; }
+.mes_text .wavey-inchat-receipt:empty { display: none; }
+
+/* ===== редактор аккаунта: фото и био ===== */
+#wavey-phone .wv-photo-actions { display: flex; justify-content: center; gap: 18px; margin: -6px 0 16px; font-size: 13px; }
+#wavey-phone .wv-photo-actions span { color: #ddd; cursor: pointer; transition: opacity 0.12s; }
+#wavey-phone .wv-photo-actions span:hover { color: #fff; }
+#wavey-phone .wv-photo-actions span:active { opacity: 0.55; }
+#wavey-phone .wv-photo-actions span + span { color: #777; }
+#wavey-phone .wv-profile-bio { font-size: 14px; color: #ccc; line-height: 1.45; margin: -8px 0 16px; max-width: 260px; white-space: pre-wrap; overflow-wrap: anywhere; }
+#wavey-phone .wv-profile-bio:empty { display: none; }
+
+/* ===== пересланные твиты ===== */
+#wavey-phone .wv-shared {
+    display: block;
+    padding: 9px 11px;
+    border-radius: 12px;
+    background: #0c0c0c;
+    border: 1px solid #262626;
+    text-align: left;
+    cursor: pointer;
+    transition: opacity 0.12s;
+}
+
+#wavey-phone .wv-shared:active { opacity: 0.6; }
+#wavey-phone .wv-shared-head { display: flex; gap: 5px; align-items: baseline; flex-wrap: wrap; font-size: 12px; margin-bottom: 3px; }
+#wavey-phone .wv-shared-head b { color: #eee; font-weight: 600; }
+#wavey-phone .wv-shared-head span { color: #777; }
+#wavey-phone .wv-shared-text { font-size: 13px; line-height: 1.4; color: #ccc; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* в пузыре: карточка во всю ширину, комментарий под ней */
+#wavey-phone .wv-bubble.wv-bubble-shared { white-space: normal; padding: 4px; background: #1c1c1c !important; border: 1px solid #262626; color: #eee !important; min-width: 200px; }
+#wavey-phone .wv-shared-comment { white-space: pre-wrap; padding: 6px 8px 3px; font-size: 14px; color: #eee; }
+
+/* превью в шторке «Отправить» */
+#wavey-phone .wv-share-preview { margin: 0 0 12px; cursor: default; }
+#wavey-phone .wv-share-preview:active { opacity: 1; }
+#wavey-phone [data-wv-share-to] .wv-ios-chevron svg { width: 15px; height: 15px; }
+
+/* ===== голосовые сообщения ===== */
+#wavey-phone .wv-bubble.wv-bubble-voice { white-space: normal; min-width: 210px; padding: 8px 10px 9px; }
+#wavey-phone .wv-voice { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; --wv-voice-duration: 3s; }
+
+#wavey-phone .wv-voice-play {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #eee;
+    color: #0c0c0c;
+    transition: opacity 0.12s;
+}
+
+#wavey-phone .wv-voice-play svg { width: 12px; height: 12px; margin-left: 2px; stroke: none; }
+#wavey-phone .wv-voice:active .wv-voice-play { opacity: 0.6; }
+#wavey-phone .wv-from-user .wv-voice-play { background: #0c0c0c; color: #eee; }
+
+#wavey-phone .wv-voice-wave { position: relative; flex: 1; height: 26px; display: flex; align-items: center; gap: 2px; min-width: 0; }
+#wavey-phone .wv-voice-wave i { flex: 1; min-width: 2px; border-radius: 2px; background: #555; }
+#wavey-phone .wv-from-user .wv-voice-wave i { background: #999; }
+
+/* закрашивание волны при «проигрывании» */
+#wavey-phone .wv-voice-progress {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    clip-path: inset(0 100% 0 0);
+}
+
+#wavey-phone .wv-voice-progress i { background: #eee; }
+#wavey-phone .wv-from-user .wv-voice-progress i { background: #0c0c0c; }
+#wavey-phone .wv-voice.wv-playing .wv-voice-progress { animation: wv-voice-fill var(--wv-voice-duration) linear forwards; }
+
+@keyframes wv-voice-fill {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0 0 0 0); }
+}
+
+#wavey-phone .wv-voice-time { font-size: 11px; color: #888; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+#wavey-phone .wv-from-user .wv-voice-time { color: #555; }
+
+#wavey-phone .wv-voice-transcript {
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid #2a2a2a;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #bbb;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#wavey-phone .wv-from-user .wv-voice-transcript { border-top-color: #cfcfcf; color: #333; }
+
+/* кнопка голосового у поля ввода */
+#wavey-phone .wv-mic {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #888;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, opacity 0.12s;
+}
+
+#wavey-phone .wv-mic svg { width: 19px; height: 19px; }
+#wavey-phone .wv-mic:hover { color: #ddd; }
+#wavey-phone .wv-mic:active { opacity: 0.55; }
+#wavey-phone .wv-voice-mode .wv-mic { background: #e8e8e8; color: #0c0c0c; }
+#wavey-phone .wv-voice-mode .wv-chat-input { border-color: #3a3a3a !important; font-style: italic; }
+
+/* ===== фото в твитах ===== */
+#wavey-phone .wv-tweet-photo {
+    margin: -4px 0 12px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--wv-line);
+    background: #141414;
+}
+
+#wavey-phone .wv-tweet-photo img { display: block; width: 100%; max-height: 300px; object-fit: cover; }
+#wavey-phone .wv-main-tweet .wv-tweet-photo { margin: 0 0 12px; }
+#wavey-phone .wv-main-tweet .wv-tweet-photo img { max-height: 420px; }
+
+#wavey-phone .wv-photo-pending {
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #666;
+    background: linear-gradient(110deg, #141414 30%, #1e1e1e 50%, #141414 70%);
+    background-size: 200% 100%;
+    animation: wv-shimmer 1.6s linear infinite;
+}
+
+@keyframes wv-shimmer { to { background-position: -200% 0; } }
+
+/* список стилей фото: описание — не больше двух строк, строкам — воздух */
+#wavey-phone [data-wv-image-style] { padding-top: 10px; padding-bottom: 10px; min-height: 0; }
+#wavey-phone [data-wv-image-style] .wv-account-handle {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.35;
+    margin-top: 2px;
+}
+
+/* фото по нажатию / перерисовать */
+#wavey-phone .wv-tweet-photo { position: relative; }
+#wavey-phone .wv-photo-idle {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #888;
+    cursor: pointer;
+    border-style: dashed;
+    transition: color 0.15s, opacity 0.12s;
+}
+
+#wavey-phone .wv-photo-idle svg { width: 16px; height: 16px; }
+#wavey-phone .wv-photo-idle:hover { color: #ddd; }
+#wavey-phone .wv-photo-idle:active { opacity: 0.55; }
+
+#wavey-phone .wv-photo-regen {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 12, 12, 0.72);
+    color: #eee;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.12s;
+}
+
+#wavey-phone .wv-photo-regen svg { width: 14px; height: 14px; }
+#wavey-phone .wv-photo-regen:hover { opacity: 1; }
+#wavey-phone .wv-photo-regen:active { opacity: 0.5; }
+
+/* фото в пересланном твите */
+#wavey-phone .wv-shared-photo { display: block; width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 7px; }
+#wavey-phone .wv-shared-photo-note { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 11px; color: #777; }
+#wavey-phone .wv-shared-photo-note svg { width: 12px; height: 12px; }
+
+/* ===== свои фото: в чате и в твите ===== */
+#wavey-phone .wv-attach:empty { display: none; }
+#wavey-phone .wv-attach { padding: 8px 12px 0; border-top: 1px solid var(--wv-line); }
+#wavey-phone .wv-attach + .wv-chat-composer { border-top: none; }
+#wavey-phone .wv-attach-thumb { position: relative; display: inline-block; }
+#wavey-phone .wv-attach-thumb img { display: block; height: 72px; max-width: 160px; object-fit: cover; border-radius: 10px; border: 1px solid #262626; }
+#wavey-phone .wv-attach-wide img { height: auto; max-height: 160px; max-width: 100%; }
+#wavey-phone .wv-attach-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8e8e8;
+    color: #0c0c0c;
+    cursor: pointer;
+}
+
+#wavey-phone .wv-attach-remove svg { width: 12px; height: 12px; stroke-width: 3; }
+#wavey-phone .wv-attach-error { font-size: 12px; color: #999; padding-bottom: 4px; }
+#wavey-phone [data-wv="tweetAttach"]:empty { display: none; }
+#wavey-phone .wv-compose-photo { width: 30px; height: 30px; color: #999; }
+#wavey-phone .wv-compose-photo svg { width: 18px; height: 18px; }
+#wavey-phone .wv-send.wv-busy { opacity: 0.5; pointer-events: none; }
+
+/* фото в пузыре */
+#wavey-phone .wv-bubble:has(.wv-bubble-img) { padding: 3px; white-space: normal; }
+#wavey-phone .wv-bubble-img { display: block; max-width: 220px; max-height: 260px; width: 100%; object-fit: cover; border-radius: 15px; cursor: zoom-in; }
+#wavey-phone .wv-bubble:has(.wv-bubble-photo) { padding: 3px; white-space: normal; }
+#wavey-phone .wv-bubble-photo { margin: 0; width: 220px; max-width: 100%; border-radius: 15px; }
+#wavey-phone .wv-photo-caption { padding: 6px 9px 4px; white-space: pre-wrap; }
+
+/* просмотр на весь экран */
+#wavey-phone .wv-viewer {
+    position: absolute;
+    inset: 0;
+    z-index: 160;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.94);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    cursor: zoom-out;
+}
+
+#wavey-phone .wv-viewer.wv-open { opacity: 1; pointer-events: auto; }
+#wavey-phone .wv-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* ===== выбор и удаление сообщений ===== */
+#wavey-phone .wv-select-only,
+#wavey-phone .wv-select-bar,
+#wavey-phone .wv-check { display: none; }
+#wavey-phone .wv-selecting .wv-chat-header > :not(.wv-select-only),
+#wavey-phone .wv-selecting .wv-chat-composer,
+#wavey-phone .wv-selecting .wv-attach { display: none; }
+#wavey-phone .wv-selecting .wv-select-only { display: block; }
+#wavey-phone .wv-select-title { flex: 1; text-align: center; font-size: 15px; font-weight: 600; color: #eee; }
+#wavey-phone .wv-select-spacer { cursor: default; }
+#wavey-phone .wv-selecting .wv-bubble-row { position: relative; padding-left: 30px; cursor: pointer; user-select: none; }
+#wavey-phone .wv-selecting .wv-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    left: 2px;
+    bottom: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid #555;
+    color: transparent;
+}
+#wavey-phone .wv-selecting .wv-selected .wv-check { background: #e8e8e8; border-color: #e8e8e8; color: #0c0c0c; }
+#wavey-phone .wv-check svg { width: 12px; height: 12px; }
+#wavey-phone .wv-selecting .wv-bubble-row:not(.wv-selected) .wv-bubble { opacity: 0.55; }
+#wavey-phone .wv-selecting .wv-select-bar {
+    display: flex;
+    justify-content: center;
+    padding: 12px 12px 16px;
+    border-top: 1px solid var(--wv-line);
+    flex-shrink: 0;
+}
+#wavey-phone .wv-select-delete { display: flex; align-items: center; gap: 6px; color: #eee; font-size: 15px; cursor: pointer; user-select: none; }
+#wavey-phone .wv-select-delete svg { width: 18px; height: 18px; }
+#wavey-phone .wv-select-delete.wv-disabled { opacity: 0.35; pointer-events: none; }
+#wavey-phone .wv-chat-body { -webkit-touch-callout: none; }
+
+/* ===== ответ на сообщение ===== */
+#wavey-phone .wv-chat-body { touch-action: pan-y; }
+#wavey-phone .wv-bubble-row { transition: transform 0.15s; }
+#wavey-phone .wv-quote {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    border-left: 2px solid currentColor;
+    border-radius: 4px;
+    background: rgba(127, 127, 127, 0.14);
+    font-size: 12px;
+    line-height: 1.3;
+    white-space: normal;
+    cursor: pointer;
+}
+#wavey-phone .wv-quote b { font-weight: 600; }
+#wavey-phone .wv-quote span { opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#wavey-phone .wv-reply-bar { display: flex; align-items: center; gap: 8px; padding-bottom: 2px; color: #ddd; }
+#wavey-phone .wv-reply-bar .wv-quote { flex: 1; margin: 0; cursor: default; }
+#wavey-phone .wv-reply-bar .wv-attach-remove { position: static; flex-shrink: 0; }
+#wavey-phone .wv-attach + .wv-attach { border-top: none; }
+#wavey-phone .wv-bubble-row.wv-flash .wv-bubble { outline: 2px solid #888; outline-offset: 2px; }
+#wavey-phone .wv-bubble-photo-wrap { position: relative; }

@@ -1,0 +1,12 @@
+{
+    "display_name": "Wavey",
+    "version": "0.1.0",
+    "js": "index.js",
+    "css": "style.css",
+    "author": "aurel11a",
+    "description": "In-roleplay smartphone: messenger, social feed and contacts driven by your story.",
+    "requires": [],
+    "optional": [],
+    "loading_order": 120,
+    "auto_update": true
+}
