@@ -7,6 +7,7 @@ import { ctx, LOG } from '../../core/context.js';
 import { getSettings } from '../../core/settings.js';
 import { findTweet, getPhoneData, notifyDataChanged } from '../../core/store.js';
 import { deleteImage, uploadImage } from '../../ui/image.js';
+import { mentions } from '../../core/presence.js';
 
 const COS_SETTINGS_KEY = 'chamber_gen';
 /** Папки, где обычно лежит Chamber of Secrets (имя папки = имя репозитория) */
@@ -21,7 +22,7 @@ export const REALISM_STYLE = 'Candid smartphone photo posted on social media: re
 /** Кусок правил для промптов ленты/слухов — только если фото включены */
 export function imagePromptRule() {
     if (!imagesEnabled()) return '';
-    return `A tweet MAY have a photo when it naturally would (a selfie, food, a view, an outfit, an event, a screenshot-like moment) — at most ${MAX_IMAGES_PER_BATCH} per reply, most tweets have none. Add it as "image": {"prompt": "what is in the photo, concrete and visual, in English, no art-style words; call people in it by their exact names", "people": ["exact names of story characters or USER visible in the photo"]}.`;
+    return `A tweet MAY have a photo when it naturally would (a selfie, food, a view, an outfit, an event, a screenshot-like moment) — at most ${MAX_IMAGES_PER_BATCH} per reply, most tweets have none. Add it as "image": {"prompt": "what is in the photo, concrete and visual, in English, no art-style words; if a specific person must appear, write their exact name or nickname in it — unnamed people get no likeness reference", "people": ["exact names of story characters or USER visible in the photo"]}.`;
 }
 
 // ---------- Chamber of Secrets ----------
@@ -43,8 +44,9 @@ async function loadCos() {
             const pipeline = await import(`/scripts/extensions/third-party/${folder}/src/pipeline.js`);
             const utils = await import(`/scripts/extensions/third-party/${folder}/src/utils.js`);
             const providers = await import(`/scripts/extensions/third-party/${folder}/src/providers.js`).catch(() => null);
+            const references = await import(`/scripts/extensions/third-party/${folder}/src/references.js`).catch(() => null);
             if (typeof pipeline.generateImageWithRetry !== 'function') continue;
-            cos = { generateImageWithRetry: pipeline.generateImageWithRetry, saveImageToFile: utils.saveImageToFile, providers, folder };
+            cos = { generateImageWithRetry: pipeline.generateImageWithRetry, saveImageToFile: utils.saveImageToFile, utils, providers, references, folder };
             return cos;
         } catch { /* не та папка — пробуем следующую */ }
     }
@@ -164,27 +166,81 @@ async function fileToDataUrl(path) {
 }
 
 /**
- * Если у контакта стоит своя аватарка — на время генерации Chamber of Secrets получает
- * рефом только её (вместо своих обычных рефов). Нет аватарки — рефы как обычно.
+ * Кто в кадре — только те, кого назвали: в описании кадра или в списке «кто в кадре»
+ * (по имени, «ещё зовут» или подписи в телефоне: «Loulou»). Никого не назвали — никого нет.
  */
-async function withContactReference(contact, run) {
-    if (!contact?.avatarPath || !cos?.providers) return run();
-    const provider = cos.providers.resolveActiveProvider?.(ctx().extensionSettings[COS_SETTINGS_KEY]);
-    if (!provider || typeof provider.collectReferences !== 'function') return run();
+function peopleInPhoto(data, image) {
+    const text = [image.prompt, ...(image.people ?? [])].join('\n');
+    const named = (data?.contacts ?? []).filter(c => mentions(c, text, { withLabel: true }));
+    const { name1, characters, characterId } = ctx();
+    const storyAvatar = characters?.[characterId]?.avatar;
+    return {
+        // со своей аватаркой в карточке — она и есть реф
+        contacts: named.filter(c => c.avatarPath),
+        // персонаж истории без своей аватарки — реф из Chamber of Secrets
+        storyChar: named.some(c => c.main && !c.avatarPath && c.charAvatar === storyAvatar),
+        user: (image.people ?? []).some(p => ['user', nameKey(name1)].includes(nameKey(p))) || mentions({ name: name1 }, text),
+        covered: named.filter(c => c.avatarPath),
+    };
+}
 
-    let image;
-    try {
-        const dataUrl = await fileToDataUrl(contact.avatarPath);
-        image = DATA_URL_PROVIDERS.has(provider.id) ? dataUrl : dataUrl.split(',')[1];
-    } catch (error) {
-        console.warn(LOG, 'contact reference', error);
-        return run();
-    }
-    const reference = { image, description: `${contact.name} — what this person looks like`, source: 'additional' };
+const nameKey = (value) => String(value ?? '').trim().toLowerCase();
+
+/**
+ * Рефы только для названных людей: аватарки контактов из карточек; персонаж истории
+ * и юзер — как настроено в Chamber of Secrets (лицо и наряд из его библиотеки);
+ * рефы из лорбука Chamber — если их имя есть в описании. Картинка-образец стиля остаётся.
+ * Никого не назвали — людей в рефах нет.
+ */
+async function withPeopleReferences(people, run) {
+    if (!cos?.providers || !cos.references) return run();
+    const settings = ctx().extensionSettings[COS_SETTINGS_KEY];
+    const provider = cos.providers.resolveActiveProvider?.(settings);
+    if (!provider || typeof provider.collectReferences !== 'function') return run();
+    const format = DATA_URL_PROVIDERS.has(provider.id) ? 'dataUrl' : 'base64';
+    const naistera = provider.id === 'naistera';
+
+    const collect = async ({ matchedAdditionalRefs = [] } = {}) => {
+        const references = [];
+        const safely = async (what, task) => {
+            try { await task(); } catch (error) { console.warn(LOG, what, error); }
+        };
+        for (const contact of people.contacts) {
+            await safely('contact reference', async () => {
+                const dataUrl = await fileToDataUrl(contact.avatarPath);
+                references.push({ image: format === 'dataUrl' ? dataUrl : dataUrl.split(',')[1], description: `${contact.name} — what this person looks like`, source: 'additional' });
+            });
+        }
+        const sendChar = naistera ? settings.naisteraSendCharAvatar : settings.sendCharAvatar;
+        const sendUser = naistera ? settings.naisteraSendUserAvatar : settings.sendUserAvatar;
+        if (people.storyChar && sendChar) {
+            await safely('char reference', async () => references.push(...await cos.references.collectCharacterLibraryReferences('char', format, settings)));
+        }
+        if (people.user && sendUser) {
+            await safely('user reference', async () => references.push(...await cos.references.collectCharacterLibraryReferences('user', format, settings)));
+        }
+        // лорбук Chamber: только совпавшие по имени (не «всегда») и не те, у кого уже есть аватарка
+        for (const ref of matchedAdditionalRefs) {
+            if (ref.matchMode === 'always' || !ref.imagePath) continue;
+            if (people.covered.some(c => mentions(c, ref.name, { withLabel: true }))) continue;
+            await safely('lorebook reference', async () => {
+                const path = cos.utils.normalizeStoredImagePath?.(ref.imagePath) ?? ref.imagePath;
+                const image = format === 'dataUrl' ? await cos.utils.imageUrlToDataUrl(path) : await cos.utils.imageUrlToBase64(path);
+                if (image) references.push({ image, description: ref.description || ref.name, source: 'additional' });
+            });
+        }
+        await safely('style reference', async () => {
+            const style = await cos.references.collectStyleReference?.(format, settings);
+            if (style) references.push(style);
+        });
+        const max = cos.providers.getActiveProviderMaxReferences?.(settings);
+        if (max > 0 && references.length > max) references.length = max;
+        return references;
+    };
 
     const ownMethod = Object.prototype.hasOwnProperty.call(provider, 'collectReferences');
     const original = provider.collectReferences;
-    provider.collectReferences = async () => [reference];
+    provider.collectReferences = collect;
     try {
         return await run();
     } finally {
@@ -199,7 +255,7 @@ async function withContactReference(contact, run) {
  * @param {string} id
  */
 async function generateFor(kind, id) {
-    const { image, contact } = ownerOf(getPhoneData(), kind, id);
+    const { image } = ownerOf(getPhoneData(), kind, id);
     if (!image || image.status !== 'pending') return;
 
     // «Фото загружается» видно хотя бы немного, даже если ошибка пришла мгновенно —
@@ -217,7 +273,8 @@ async function generateFor(kind, id) {
     const style = chosenStyle();
 
     try {
-        const generated = await withStyle(style.id, () => withContactReference(contact, () =>
+        const people = peopleInPhoto(getPhoneData(), image);
+        const generated = await withStyle(style.id, () => withPeopleReferences(people, () =>
             pipeline.generateImageWithRetry(promptWithPeople(image), style.text, null, {})));
         const path = await saveGenerated(pipeline, generated);
         const fresh = imageOf(getPhoneData(), kind, id);
@@ -290,7 +347,7 @@ export const chatImageFromRaw = (raw) => (chatImagesEnabled() ? parseImage(raw) 
 /** Правило для промпта переписки */
 export function chatPhotoRule() {
     if (!chatImagesEnabled()) return '';
-    return 'You MAY send a photo when it fits naturally (a selfie, what you are looking at, food, an outfit, a place, a meme) — not often. A photo is a message of its own: {"photo": {"prompt": "what is in the photo, concrete and visual, in English, no art-style words; call people in it by their exact names", "people": ["exact names of story characters or USER visible in it"]}, "text": "optional caption"}.';
+    return 'You MAY send a photo when it fits naturally (a selfie, what you are looking at, food, an outfit, a place, a meme) — not often. A photo is a message of its own: {"photo": {"prompt": "what is in the photo, concrete and visual, in English, no art-style words; if a specific person must appear, write their exact name or nickname in it — unnamed people get no likeness reference", "people": ["exact names of story characters or USER visible in it"]}, "text": "optional caption"}.';
 }
 
 /** Новые фото от персонажа: сразу рисуем (если так настроено) */

@@ -33,6 +33,19 @@ function wordRegex(tokens) {
     return new RegExp(`(?<![\\p{L}\\p{N}])(?:${tokens.map(escapeRe).join('|')})(?![\\p{L}\\p{N}])`, 'iu');
 }
 
+/**
+ * Назван ли человек в тексте: имя, первое имя, «ещё зовут» и (по желанию) подпись в телефоне.
+ * @param {object} contact
+ * @param {string} text
+ * @param {{ withLabel?: boolean }} [options]
+ */
+export function mentions(contact, text, { withLabel = false } = {}) {
+    const extra = withLabel && contact?.label ? [String(contact.label).replace(/[^\p{L}\p{N}\s'-]/gu, '').trim()] : [];
+    const tokens = [...nameTokens(contact), ...extra.filter(t => t.length >= 2)];
+    if (!tokens.length || !text) return false;
+    return wordRegex(tokens).test(text) || wordRegex([...new Set(tokens.map(toLatin))]).test(toLatin(text));
+}
+
 /** Проверка имени как есть и в транслите: «Irina» в карточке = «Ирина» в русском тексте */
 function mentionTest(contact) {
     const tokens = nameTokens(contact);
