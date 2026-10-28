@@ -18,8 +18,12 @@ export function placeAt(target, left, top) {
     target.style.bottom = 'auto';
 }
 
-export function clampIntoView(target) {
-    if (isNarrow() || !target.offsetWidth) return;
+/**
+ * @param {HTMLElement} target
+ * @param {{ always?: boolean }} [options]  always — и на узких экранах (плавающая кнопка)
+ */
+export function clampIntoView(target, { always = false } = {}) {
+    if ((isNarrow() && !always) || !target.offsetWidth) return;
     // offset* не учитывают transform анимации появления, в отличие от getBoundingClientRect
     const size = { width: target.offsetWidth, height: target.offsetHeight };
     const { left, top } = clampPos(size, target.offsetLeft, target.offsetTop);

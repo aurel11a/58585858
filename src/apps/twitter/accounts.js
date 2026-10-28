@@ -83,6 +83,14 @@ export function accountsOverlayHtml() {
       </div>
     </div>
     <div class="wv-ios-footer">${tr('accountNoteHint')}</div>
+
+    <div class="wv-ios-section-title">${tr('accountInterests')}</div>
+    <div class="wv-ios-group">
+      <div class="wv-ios-field">
+        <textarea class="wv-field wv-textarea" data-wv="editorInterests" rows="3" placeholder="${tr('accountInterestsPh')}"></textarea>
+      </div>
+    </div>
+    <div class="wv-ios-footer">${tr('accountInterestsHint')}</div>
   </div>
 </div>`;
 }
@@ -164,7 +172,7 @@ function refreshEditor() {
 }
 
 function fitTextareas() {
-    for (const name of ['editorBio', 'editorNote']) {
+    for (const name of ['editorBio', 'editorNote', 'editorInterests']) {
         const area = el(name);
         area.style.height = 'auto';
         area.style.height = area.scrollHeight + 2 + 'px';
@@ -184,6 +192,7 @@ export function openAccountEditor(mode) {
     field('editorHandle').value = account ? cleanHandle(account.handle) : '';
     field('editorBio').value = account?.bio ?? '';
     field('editorNote').value = account?.note ?? '';
+    field('editorInterests').value = account?.interests ?? '';
     field('editorFollowers').value = String(account?.followers ?? 0);
     field('editorFollowing').value = String(account?.following ?? 0);
     refreshEditor();
@@ -245,6 +254,7 @@ async function saveEditor() {
     const fields = {
         bio: field('editorBio').value.trim(),
         note: field('editorNote').value.trim(),
+        interests: field('editorInterests').value.trim(),
         followers: sanitizeCount(field('editorFollowers').value),
         following: sanitizeCount(field('editorFollowing').value),
     };
@@ -296,7 +306,7 @@ export function bindAccounts(changeCallback) {
         if (clean !== input.value) input.value = clean;
         refreshEditor();
     });
-    for (const name of ['editorBio', 'editorNote']) el(name).addEventListener('input', fitTextareas);
+    for (const name of ['editorBio', 'editorNote', 'editorInterests']) el(name).addEventListener('input', fitTextareas);
     el('accountEditor').addEventListener('keydown', (e) => {
         // Enter в однострочных полях — «Готово», в био и заметке — новая строка
         if (e.key === 'Enter' && /** @type {HTMLElement} */ (e.target).tagName !== 'TEXTAREA') saveEditor();

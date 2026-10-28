@@ -5,8 +5,9 @@ import { LOG, TWEET_LIMIT } from '../../core/context.js';
 import { escapeHtml, formatCount, localeTag, relativeTime } from '../../core/format.js';
 import { authorOf, findTweet, getCurrentAccount, getPhoneData, notifyDataChanged, savePhoneData } from '../../core/store.js';
 import { authorKey, authorTweets, findAuthor, generateProfile } from './profile.js';
+import { followsOf, isFollowing, toggleFollow } from './follows.js';
 import { getStoryNow } from '../../core/story-clock.js';
-import { feedIsStale, generateFeed } from './feed.js';
+import { feedIsStale, generateFeed, inFeedOf } from './feed.js';
 import { migrateInlineAvatars } from '../../ui/image.js';
 import { avatarHtml } from '../../ui/avatar.js';
 import { ICONS } from '../../ui/icons.js';
@@ -22,7 +23,14 @@ let refreshing = false;
 
 /** Аккаунты юзера по id: в твитах хранится снимок автора, а фото и имя берём живые */
 let accountsById = new Map();
-const liveAuthor = (author) => accountsById.get(author?.id) ?? author;
+/** Своя аватарка контакта (если поставили в карточке) — тоже живая */
+const contactAvatar = (id) => getPhoneData()?.contacts.find(c => c.id === id)?.avatarPath ?? null;
+const liveAuthor = (author) => {
+    const account = accountsById.get(author?.id);
+    if (account) return account;
+    const avatarPath = author?.contact ? contactAvatar(author.id) : null;
+    return avatarPath ? { ...author, avatarPath } : author;
+};
 
 /** «5 мин» — от сюжетного «сейчас», а не от реальных часов */
 const ago = (ts) => relativeTime(ts, getStoryNow().getTime());
@@ -138,12 +146,14 @@ function renderFeedAndProfile(data) {
     // точка на иконке: пришли реакции, пока юзер был не в твиттере
     $q('[data-wv-dot="twitter"]')?.classList.toggle('wv-show', Boolean(data?.twitterUnseen) && !isTwitterVisible());
 
-    el('feed').innerHTML = tweets.length
-        ? tweets.map(tweetHtml).join('')
+    // у каждого аккаунта юзера своя лента
+    const account = data ? getCurrentAccount(data) : null;
+    const feed = account ? tweets.filter(t => inFeedOf(data, account, t)) : [];
+    el('feed').innerHTML = feed.length
+        ? feed.map(tweetHtml).join('')
         : `<div class="wv-empty">${data ? tr('feedEmpty') : tr('noChat')}</div>`;
 
     if (!data) return;
-    const account = getCurrentAccount(data);
     const mine = tweets.filter(t => t.author.id === account.id);
 
     el('myFeed').innerHTML = mine.length ? mine.map(tweetHtml).join('') : `<div class="wv-empty">${tr('noTweets')}</div>`;
@@ -369,6 +379,48 @@ async function loadProfile() {
     }
 }
 
+function followButton(data, author) {
+    const on = isFollowing(getCurrentAccount(data), author.handle);
+    return `<button class="wv-profile-btn wv-follow-btn ${on ? '' : 'wv-follow-off'}" data-wv-action="toggleFollow">${on ? tr('followingBtn') : tr('followBtn')}</button>`;
+}
+
+function followAuthor() {
+    const data = getPhoneData();
+    const found = data && authorHandle && findAuthor(data, authorHandle);
+    if (!found || found.own) return;
+    toggleFollow(data, found);
+}
+
+// ---------- список подписок ----------
+
+function openFollowing() {
+    raise(el('followingPage'));
+    el('followingPage').classList.add('wv-open');
+    renderFollowing(getPhoneData());
+}
+
+function closeFollowing() {
+    el('followingPage')?.classList.remove('wv-open');
+}
+
+function renderFollowing(data) {
+    if (!data || !el('followingPage').classList.contains('wv-open')) return;
+    const account = getCurrentAccount(data);
+    el('followingTitle').textContent = tr('followingOf', account.handle);
+    const list = followsOf(account);
+    el('followingList').innerHTML = list.length
+        ? list.map(f => `
+<div class="wv-ios-row wv-account-row wv-ios-link" data-wv-author="${escapeHtml(f.handle)}">
+  ${avatarHtml(liveAuthor(f.author ?? f), 'wv-sm')}
+  <div class="wv-account-info">
+    <div class="wv-account-name">${escapeHtml(f.name)}</div>
+    <div class="wv-account-handle">${escapeHtml(f.handle)}</div>
+  </div>
+  <div class="wv-ios-chevron">${ICONS.chevron}</div>
+</div>`).join('')
+        : `<div class="wv-empty">${tr('noFollowing')}</div>`;
+}
+
 function renderAuthorPage(data) {
     if (!authorHandle || !data) return;
     const found = findAuthor(data, authorHandle);
@@ -389,7 +441,8 @@ ${profile?.bio ? `<div class="wv-profile-bio">${escapeHtml(profile.bio)}</div>` 
 <div class="wv-stats">
   <div class="wv-stat"><span class="wv-num">${formatCount(following)}</span><span class="wv-label">${tr('following')}</span></div>
   <div class="wv-stat"><span class="wv-num">${formatCount(followers)}</span><span class="wv-label">${tr('followers')}</span></div>
-</div>`;
+</div>
+${followButton(data, author)}`;
 
     const status = loadingProfiles.has(key) ? tr('profileLoading') : failedProfiles.has(key) ? tr('profileFailed') : '';
     el('authorStatus').textContent = status;
@@ -478,7 +531,7 @@ export const twitterApp = {
       <div class="wv-profile-handle" data-wv="profileHandle"></div>
       <div class="wv-profile-bio" data-wv="profileBio"></div>
       <div class="wv-stats">
-        <div class="wv-stat"><span class="wv-num" data-wv="statFollowing"></span><span class="wv-label">${tr('following')}</span></div>
+        <div class="wv-stat wv-stat-link" data-wv-action="openFollowing"><span class="wv-num" data-wv="statFollowing"></span><span class="wv-label">${tr('following')}</span></div>
         <div class="wv-stat"><span class="wv-num" data-wv="statFollowers"></span><span class="wv-label">${tr('followers')}</span></div>
       </div>
       <button class="wv-profile-btn" data-wv-action="editProfile">${tr('editProfile')}</button>
@@ -504,6 +557,15 @@ export const twitterApp = {
     <div class="wv-profile" data-wv="authorHead"></div>
     <div class="wv-list-status" data-wv="authorStatus"></div>
     <div class="wv-feed" data-wv="authorFeed"></div>
+  </div>
+</div>
+<div class="wv-thread" data-wv="followingPage">
+  <div class="wv-thread-header">
+    <div class="wv-icon-btn" data-wv-action="followingBack">${ICONS.back}</div>
+    <div class="wv-thread-title" data-wv="followingTitle"></div>
+  </div>
+  <div class="wv-scroll wv-ios-scroll">
+    <div class="wv-ios-group wv-following-list" data-wv="followingList"></div>
   </div>
 </div>
 <div class="wv-thread" data-wv="thread">
@@ -535,7 +597,13 @@ export const twitterApp = {
         });
         el('sendReply').addEventListener('click', postReply);
 
-        bindAccounts(() => renderFeedAndProfile(getPhoneData()));
+        bindAccounts(() => {
+            const data = getPhoneData();
+            renderFeedAndProfile(data);
+            // сменили аккаунт — своя лента; пустая или старая подгрузится сама (если включено)
+            el('feedScroll').scrollTop = 0;
+            if (data && feedIsStale(data)) refreshFeed();
+        });
     },
 
     render(data) {
@@ -546,6 +614,8 @@ export const twitterApp = {
         else closeThread();
         if (authorHandle && data) renderAuthorPage(data);
         else closeAuthor();
+        if (data) renderFollowing(data);
+        else closeFollowing();
     },
 
     onClick(target) {
@@ -559,6 +629,9 @@ export const twitterApp = {
         if (action === 'threadBack') return closeThread(), true;
         if (action === 'authorBack') return closeAuthor(), true;
         if (action === 'authorRefresh') return loadProfile(), true;
+        if (action === 'toggleFollow') return followAuthor(), true;
+        if (action === 'openFollowing') return openFollowing(), true;
+        if (action === 'followingBack') return closeFollowing(), true;
         if (action === 'tweetPhoto') return attachTweetPhoto(), true;
         if (action === 'tweetPhotoRemove') return clearTweetPhoto(), true;
         if (action === 'refreshFeed') return refreshFeed(), true;
@@ -595,18 +668,22 @@ export const twitterApp = {
     onEscape() {
         if (accountsOnEscape()) return true;
         if (shareOnEscape()) return true;
-        const thread = el('thread').classList.contains('wv-open');
-        const author = el('authorPage').classList.contains('wv-open');
-        if (!thread && !author) return false;
-        // закрываем верхний
-        if (thread && (!author || Number(el('thread').style.zIndex) > Number(el('authorPage').style.zIndex))) closeThread();
-        else closeAuthor();
+        // закрываем верхний из открытых экранов
+        const top = ['thread', 'authorPage', 'followingPage']
+            .map(name => el(name))
+            .filter(node => node.classList.contains('wv-open'))
+            .sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0];
+        if (!top) return false;
+        if (top === el('thread')) closeThread();
+        else if (top === el('authorPage')) closeAuthor();
+        else closeFollowing();
         return true;
     },
 
     onChatChanged() {
         closeThread();
         closeAuthor();
+        closeFollowing();
         resetAccounts();
         closeShareSheet();
     },

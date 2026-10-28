@@ -16,6 +16,7 @@ const FAB_DEFAULT_POS = 'right:20px;bottom:120px';
 function updateFabVisibility() {
     const enabled = getSettings().floatingButton;
     fabEl?.classList.toggle('wv-hidden', !enabled);
+    if (enabled && fabEl) clampIntoView(fabEl, { always: true });
     const checkbox = /** @type {HTMLInputElement} */ (document.getElementById('wavey_floating'));
     if (checkbox) checkbox.checked = enabled;
 }
@@ -28,7 +29,8 @@ export function createFab() {
     document.body.appendChild(fabEl);
 
     const { fabPos } = getSettings();
-    if (fabPos) placeAt(fabEl, fabPos.left, fabPos.top);
+    // сразу в пределах этого экрана (48 — размер кнопки), не дожидаясь отрисовки
+    if (fabPos) placeAt(fabEl, Math.max(0, Math.min(fabPos.left, window.innerWidth - 48)), Math.max(0, Math.min(fabPos.top, window.innerHeight - 48)));
     else fabEl.style.cssText = FAB_DEFAULT_POS;
 
     const wasDragged = makeDraggable(fabEl, fabEl, (pos) => {
@@ -42,7 +44,13 @@ export function createFab() {
 
     document.addEventListener(SETTINGS_EVENT, updateFabVisibility);
     document.addEventListener(DATA_EVENT, updateFabDot);
-    window.addEventListener('resize', () => clampIntoView(fabEl));
+    // позиция общая для всех устройств: перетащенная на компьютере кнопка на телефоне
+    // оказалась бы за краем экрана — всегда возвращаем её в видимую часть
+    const keepInView = () => clampIntoView(fabEl, { always: true });
+    window.addEventListener('resize', keepInView);
+    window.visualViewport?.addEventListener('resize', keepInView);
+    requestAnimationFrame(keepInView);
+    setTimeout(keepInView, 500);
     updateFabVisibility();
 }
 

@@ -172,7 +172,7 @@ function renderChatScreen() {
 
         const selected = selecting?.has(message.id) ? 'wv-selected' : '';
         return `${divider}<div class="wv-bubble-row wv-from-${side} ${selected}" data-wv-msg="${escapeHtml(message.id)}">
-  <div class="wv-check">${ICONS.check}</div>
+  <div class="wv-msg-check">${ICONS.check}</div>
   ${sender}<div class="wv-bubble ${tail ? 'wv-tail' : ''} ${message.tweet ? 'wv-bubble-shared' : ''} ${message.voice ? 'wv-bubble-voice' : ''}">${bubbleBody(message)}</div>
   ${tail ? `<div class="wv-bubble-time">${clockOf(message.ts)}</div>` : ''}
 </div>`;

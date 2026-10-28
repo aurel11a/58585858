@@ -6,6 +6,7 @@ import { generate } from '../../core/api.js';
 import { getApi, getSettings } from '../../core/settings.js';
 import { cleanHandle, findContactByName, resolveContact } from '../../core/contacts.js';
 import { getStoryNow } from '../../core/story-clock.js';
+import { getCurrentAccount } from '../../core/store.js';
 import { momentLine, userBlock } from '../messages/reply.js';
 import { imageFromRaw, imagePromptRule, imagesAuto, MAX_IMAGES_PER_BATCH, queueTweetImages } from './images.js';
 
@@ -46,6 +47,7 @@ export function userAccountsBlock(data) {
         const parts = [`${a.handle} (${a.name}, ${a.followers ?? 0} followers)`];
         if (a.bio) parts.push(`bio: ${a.bio}`);
         if (a.note) parts.push(`about this account: ${a.note}`);
+        if (a.interests) parts.push(`into: ${a.interests}`);
         return `- ${parts.join(' — ')}`;
     }).join('\n');
 }
@@ -81,11 +83,23 @@ export function authorFrom(data, raw) {
     return { id: `npc_${cleanHandle(handle)}`, name, handle, npc: true };
 }
 
+/**
+ * Пост или ответ «от аккаунта юзера», который написала модель. За юзера в твиттере
+ * пишет только он сам — такие выбрасываем (по хэндлу или имени любого его аккаунта).
+ */
+export function isUserAccountPost(data, raw) {
+    const handle = cleanHandle(raw?.handle);
+    const name = String(raw?.name || '').trim().toLowerCase();
+    return (data.accounts ?? []).some(a =>
+        (handle && cleanHandle(a.handle) === handle) || (name && a.name.trim().toLowerCase() === name));
+}
+
 /** Твит из ответа модели, время — сюжетное */
 export function makeTweet(data, raw, { kind = 'feed', now = getStoryNow().getTime(), maxMinutes = 60 * 24 * 3 } = {}) {
     const ago = Math.max(0, Math.min(maxMinutes, Number(raw.minutesAgo ?? raw.ago) || 0));
     const ts = now - ago * 60_000;
-    const rawReplies = (Array.isArray(raw.replies) ? raw.replies : []).filter(r => String(r?.text || '').trim());
+    const rawReplies = (Array.isArray(raw.replies) ? raw.replies : [])
+        .filter(r => String(r?.text || '').trim() && !isUserAccountPost(data, r));
     // ответы — по порядку между твитом и «сейчас», не позже настоящего момента
     const span = Math.max(60_000, now - ts);
     const replies = rawReplies.map((r, i) => ({
@@ -122,54 +136,90 @@ export function startImages(tweets) {
     queueTweetImages(kept.map(t => t.id));
 }
 
-/** Добавить твиты в ленту и подрезать старые сгенерированные */
+// ---------- у каждого аккаунта юзера своя лента ----------
+
+/** Чья это лента: старые твиты без пометки — ленты основного аккаунта */
+export const feedOwner = (data, tweet) => tweet.accountId ?? data.accounts[0]?.id;
+
+/**
+ * Виден ли твит в ленте аккаунта: свои твиты этого аккаунта, его лента и «горячее» —
+ * обсуждаемое в сети видно всем.
+ */
+export function inFeedOf(data, account, tweet) {
+    if (tweet.kind === 'buzz') return true;
+    if (tweet.kind === 'user') return tweet.author?.id === account.id;
+    return feedOwner(data, tweet) === account.id;
+}
+
+/** Добавить твиты в ленту и подрезать старые сгенерированные — у каждой ленты свой лимит */
 export function addTweets(data, tweets) {
     data.tweets.push(...tweets);
     data.tweets.sort((a, b) => b.ts - a.ts);
-    const generated = data.tweets.filter(t => t.kind === 'feed');
-    if (generated.length > FEED_LIMIT) {
-        const drop = new Set(generated.slice(FEED_LIMIT).map(t => t.id));
-        data.tweets = data.tweets.filter(t => !drop.has(t.id));
+    const byOwner = new Map();
+    for (const t of data.tweets.filter(t => t.kind === 'feed')) {
+        const owner = feedOwner(data, t);
+        if (!byOwner.has(owner)) byOwner.set(owner, []);
+        byOwner.get(owner).push(t);
     }
+    const drop = new Set();
+    for (const list of byOwner.values()) list.slice(FEED_LIMIT).forEach(t => drop.add(t.id));
+    if (drop.size) data.tweets = data.tweets.filter(t => !drop.has(t.id));
 }
 
-const FEED_PROMPT = `You write the Twitter/X home feed USER sees right now, in an ongoing roleplay story.
+const FEED_PROMPT = `You write the Twitter/X home feed of ONE of USER's accounts (FEED OWNER) right now, in an ongoing roleplay story.
+Each of USER's accounts has its own feed: it follows different people and gets posts that fit what that account is (a fan account sees the fandom, a work account sees work, a secret account sees what it was made for).
 It must feel like a real feed, NOT a retelling of the story: private scenes are unknown to the public and must not appear.
-Mix: local news for the place, world/setting news that fits the date and era, sports, celebrity gossip, memes and jokes, niche posts matching USER's life and interests, small everyday posts from random people. Contacts listed under TWITTER CONTACTS may post about their own lives in their style (not every time).
+Mix: local news for the place, world/setting news that fits the date and era, sports, celebrity gossip, memes and jokes, niche posts matching the FEED OWNER account, small everyday posts from random people. Accounts the feed owner FOLLOWS post more often. Contacts listed under TWITTER CONTACTS may post about their own lives in their style (not every time) — only if this account would plausibly follow them.
+Never write posts or replies from any of USER's own accounts — only USER posts from them.
 NPC accounts need realistic display names and handles that fit the setting's culture. Engagement must be realistic: most posts are small, a few are big.
 If PUBLIC CHATTER is listed, a post or two may touch it — lightly.
 Reply with ONLY JSON:
 {"tweets": [{"name": "...", "handle": "...", "text": "...", "likes": 0, "retweets": 0, "views": 0, "minutesAgo": 0, "replies": [{"name": "...", "handle": "...", "text": "..."}]}]}
 Write {{count}} tweets, 0-3 replies each, minutesAgo between 1 and 600. Write them in {{language}}.`;
 
-/** Сгенерировать свежую порцию ленты. @returns {Promise<number>} сколько твитов добавлено */
+function followsBlock(account) {
+    return (account.follows ?? []).map(f => `- ${f.name} (${f.handle})`).join('\n');
+}
+
+/** Сгенерировать свежую порцию ленты текущего аккаунта. @returns {Promise<number>} сколько твитов добавлено */
 export async function generateFeed(data) {
+    const account = getCurrentAccount(data);
+    const owner = [`${account.handle} (${account.name}, ${account.followers ?? 0} followers)`];
+    if (account.bio) owner.push(`bio: ${account.bio}`);
+    if (account.note) owner.push(`about this account: ${account.note}`);
     const sections = [
         userBlock(),
         `CURRENT MOMENT: ${momentLine()}`,
         settingBlock(),
-        `USER'S OWN ACCOUNTS (USER sees the feed from these; respect what each account is — e.g. nobody links a secret account to USER):\n${userAccountsBlock(data)}`,
+        `FEED OWNER: ${owner.join(' — ')}`,
+        account.interests && `WHAT THIS ACCOUNT FOLLOWS AND IS INTO (build the feed mostly around this):\n${account.interests}`,
+        followsBlock(account) && `THE FEED OWNER FOLLOWS:\n${followsBlock(account)}`,
+        `ALL OF USER'S ACCOUNTS (respect what each account is — e.g. nobody links a secret account to USER):\n${userAccountsBlock(data)}`,
         twitterContactsBlock(data) && `TWITTER CONTACTS:\n${twitterContactsBlock(data)}`,
         publicKnowledgeBlock(data) && `PUBLIC CHATTER (already online):\n${publicKnowledgeBlock(data)}`,
     ].filter(Boolean);
 
     const system = [FEED_PROMPT.replace('{{count}}', '7').replace('{{language}}', storyLanguage()), imagePromptRule()].filter(Boolean).join('\n');
-    const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }], 4000);
+    const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }]);
     const parsed = parseJson(raw);
     const tweets = (Array.isArray(parsed.tweets) ? parsed.tweets : [])
-        .filter(t => String(t?.text || '').trim())
-        .map(t => makeTweet(data, t));
+        .filter(t => String(t?.text || '').trim() && !isUserAccountPost(data, t))
+        .map(t => ({ ...makeTweet(data, t), accountId: account.id }));
 
     addTweets(data, tweets);
     startImages(tweets);
-    data.feed = { lastAt: ctx().chat?.length ?? 0 };
+    data.feeds ??= {};
+    data.feeds[account.id] = { lastAt: ctx().chat?.length ?? 0 };
     return tweets.length;
 }
 
 /** Пора ли обновить ленту сама при открытии твиттера */
 export function feedIsStale(data) {
     if (!getSettings().feedAuto) return false;
-    if (!data.tweets.some(t => t.kind === 'feed')) return true;
-    const last = data.feed?.lastAt ?? -Infinity;
+    const account = getCurrentAccount(data);
+    if (!data.tweets.some(t => t.kind === 'feed' && feedOwner(data, t) === account.id)) return true;
+    // старое поле feed — это лента основного аккаунта
+    const legacy = account.id === data.accounts[0]?.id ? data.feed?.lastAt : undefined;
+    const last = data.feeds?.[account.id]?.lastAt ?? legacy ?? -Infinity;
     return (ctx().chat?.length ?? 0) - last >= AUTO_REFRESH_EVERY;
 }

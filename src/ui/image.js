@@ -28,8 +28,13 @@ export function pickImageFile() {
             window.removeEventListener('focus', onFocus);
             resolve(file);
         };
-        // отмена выбора: событие change не придёт, но окно вернёт фокус
-        const onFocus = () => setTimeout(() => finish(input.files?.[0] ?? null), 800);
+        // отмена выбора: change не придёт, но окно вернёт фокус. На телефонах фокус часто
+        // возвращается раньше, чем фото обработается (большое, HEIC) — поэтому не считаем
+        // это отменой сразу: ждём change ещё минуту, а пустой выбор закрываем тихо
+        const onFocus = () => setTimeout(() => {
+            if (input.files?.length) finish(input.files[0]);
+            else setTimeout(() => finish(input.files?.[0] ?? null), 60_000);
+        }, 800);
         input.addEventListener('change', () => finish(input.files?.[0] ?? null), { once: true });
         window.addEventListener('focus', onFocus, { once: true });
         input.click();

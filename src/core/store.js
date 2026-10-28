@@ -55,6 +55,8 @@ export function makeAccount(name, isPersona = false) {
         bio: '',
         // что это за профиль (тайный, рабочий, фанатский…) — видит только модель
         note: '',
+        // на что подписан и чем интересуется — под это подбирается лента
+        interests: '',
         // путь к файлу в user/images/wavey (сам файл — не в данных чата)
         avatarPath: null,
         following: Math.floor(Math.random() * 300) + 20,

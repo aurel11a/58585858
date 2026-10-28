@@ -156,7 +156,7 @@ export async function maybeInitiate(isOpen, { force = false } = {}) {
 
     busy = true;
     try {
-        const raw = await generate(getApi(), buildPrompt(data), 1500);
+        const raw = await generate(getApi(), buildPrompt(data));
         const added = applyMessages(data, parseReply(raw), isOpen);
         if (added) {
             data.initiative.lastAt = storyLength;

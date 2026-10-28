@@ -30,6 +30,14 @@ const defaultSettings = Object.freeze({
     visionPhotos: true,
     // персонажи могут присылать фото (рисует Chamber of Secrets)
     chatPhotos: true,
+    // оформление: preset — готовое сочетание, tavern — цвета темы таверны, custom — свои
+    themeMode: 'preset',
+    themePreset: 'midnight',
+    themeAccent: '#e8e8e8',
+    themeBg: '#0c0c0c',
+    // размер шрифта и иконок, %
+    fontScale: 100,
+    iconScale: 100,
     fabPos: null,
     phonePos: null,
     api: defaultApiSettings,

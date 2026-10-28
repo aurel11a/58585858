@@ -1,6 +1,7 @@
 // Контакты юзера и переписки с ними. Живут в данных телефона (метаданные чата).
 
 import { ctx } from './context.js';
+import { splitAliases } from './presence.js';
 import { makeSlug } from './format.js';
 
 export const HANDLE_MAX = 15;
@@ -106,6 +107,8 @@ export function makeContact(data, fields = {}) {
         id,
         name,
         label: String(fields.label || '').trim(),
+        // как ещё зовут в истории: «Ally, Al» — по ним ловится, что человек был в сцене
+        aliases: String(fields.aliases || '').trim(),
         handle: uniqueHandle(data, fields.handle, name, id),
         relation: String(fields.relation || '').trim(),
         style: String(fields.style || '').trim(),
@@ -165,6 +168,8 @@ export function resolveContact(data, name) {
     if (exact) return exact;
     const byLabel = (data.contacts ?? []).find(c => c.label && nameKey(c.label) === key);
     if (byLabel) return byLabel;
+    const byAlias = (data.contacts ?? []).find(c => splitAliases(c.aliases).some(alias => nameKey(alias) === key));
+    if (byAlias) return byAlias;
     const partial = (data.contacts ?? []).filter(c => nameKey(c.name).includes(key) || key.includes(nameKey(c.name)));
     return partial.length === 1 ? partial[0] : null;
 }

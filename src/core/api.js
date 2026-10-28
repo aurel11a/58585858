@@ -64,13 +64,49 @@ export async function fetchModels(endpoint, key) {
     return list.map(m => m?.id ?? m?.name ?? m).filter(m => typeof m === 'string').sort((a, b) => a.localeCompare(b));
 }
 
+// ---------- длина ответа ----------
+// Своих ограничений длины нет: обрезанный JSON просто не разобрать, а думающие модели
+// тратят часть лимита на размышления. Просим с большим запасом; если провайдер такой
+// потолок не принимает — повторяем с меньшим и запоминаем, какой подошёл.
+
+const TOKEN_LADDER = [32768, 16384, 8192, 4096];
+/** ключ API → подошедший потолок */
+const workingLimit = new Map();
+
+const apiKey = (api) => (api.mode === 'profile' ? `profile:${api.profileId}` : `manual:${api.endpoint}:${api.model}`);
+
+/** Ошибка именно из-за слишком большого max_tokens / контекста */
+function isLimitError(error) {
+    const text = [error?.message, error?.cause?.message, error?.cause?.error?.message, JSON.stringify(error?.cause ?? '')].join(' ');
+    return /max[_ ]?(output[_ ]?)?tokens|maxOutputTokens|too large|too many tokens|maximum|context[_ ]length|exceeds|must be (less|at most)|out of range/i.test(text);
+}
+
 /**
  * Один запрос к выбранному API.
  * @param {{role: string, content: string}[]} messages
- * @param {number} [maxTokens]
+ * @param {number} [maxTokens]  только для служебных запросов (проверка связи); обычно не задаётся
  * @returns {Promise<string>}
  */
-export async function generate(api, messages, maxTokens = 600) {
+export async function generate(api, messages, maxTokens) {
+    if (maxTokens) return generateOnce(api, messages, maxTokens);
+    const key = apiKey(api);
+    const known = workingLimit.get(key);
+    const ladder = known ? TOKEN_LADDER.filter(n => n <= known) : TOKEN_LADDER;
+    let lastError;
+    for (const limit of ladder) {
+        try {
+            const result = await generateOnce(api, messages, limit);
+            workingLimit.set(key, limit);
+            return result;
+        } catch (error) {
+            lastError = error;
+            if (!isLimitError(error)) throw error;
+        }
+    }
+    throw lastError;
+}
+
+async function generateOnce(api, messages, maxTokens) {
     if (api.mode === 'profile') {
         if (!api.profileId) throw new Error('no-profile');
         const result = await ctx().ConnectionManagerRequestService.sendRequest(api.profileId, messages, maxTokens, {

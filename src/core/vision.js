@@ -32,7 +32,7 @@ async function pathToDataUrl(path) {
  * @param {object} api
  * @param {{ role: string, content: string }[]} messages
  * @param {{ path: string, label: string }[]} photos  label — подпись перед картинкой («Photo #1 from Mina»)
- * @param {number} maxTokens
+ * @param {number} [maxTokens]  обычно не задаётся — без ограничения длины
  */
 export async function generateWithPhotos(api, messages, photos, maxTokens) {
     const usable = visionEnabled() ? photos.slice(-MAX_VISION_IMAGES) : [];

@@ -12,6 +12,7 @@ import { isChatOpen } from './src/apps/messages/index.js';
 import { initInChat } from './src/inchat/index.js';
 import { initBuzz } from './src/buzz/index.js';
 import { initMemo } from './src/apps/messages/memo.js';
+import { initTheme } from './src/core/theme.js';
 import { openTweetThread } from './src/apps/twitter/index.js';
 
 (function init() {
@@ -19,6 +20,7 @@ import { openTweetThread } from './src/apps/twitter/index.js';
     detectLanguage(getCurrentLocale?.() ?? localStorage.getItem('language'));
 
     getSettings();
+    initTheme();
     createPhone();
     createFab();
     addWandButton();

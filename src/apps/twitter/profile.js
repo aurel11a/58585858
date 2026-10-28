@@ -6,7 +6,7 @@ import { getApi } from '../../core/settings.js';
 import { cleanHandle } from '../../core/contacts.js';
 import { getStoryNow } from '../../core/story-clock.js';
 import { momentLine, personBlock, userBlock } from '../messages/reply.js';
-import { makeTweet, parseJson, publicKnowledgeBlock, settingBlock, startImages, storyLanguage } from './feed.js';
+import { isUserAccountPost, makeTweet, parseJson, publicKnowledgeBlock, settingBlock, startImages, storyLanguage } from './feed.js';
 import { imagePromptRule } from './images.js';
 
 export const authorKey = (handle) => cleanHandle(handle);
@@ -26,6 +26,11 @@ export function findAuthor(data, handle) {
         if (authorKey(tweet.author?.handle) === key) return { author: tweet.author };
         const reply = tweet.replies?.find(r => authorKey(r.author?.handle) === key);
         if (reply) return { author: reply.author };
+    }
+    // твиты могли вытесниться из ленты — остаётся снимок из подписок
+    for (const acc of data.accounts) {
+        const follow = (acc.follows ?? []).find(f => authorKey(f.handle) === key);
+        if (follow?.author) return { author: follow.author };
     }
     return null;
 }
@@ -68,7 +73,7 @@ export async function generateProfile(data, found) {
     ].filter(Boolean);
 
     const system = [PROFILE_PROMPT.replace('{{language}}', storyLanguage()), imagePromptRule()].filter(Boolean).join('\n');
-    const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }], 4000);
+    const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }]);
     const parsed = parseJson(raw);
 
     const now = getStoryNow().getTime();
@@ -76,6 +81,7 @@ export async function generateProfile(data, found) {
     for (const entry of Array.isArray(parsed.tweets) ? parsed.tweets : []) {
         const minutesAgo = Math.max(0, Number(entry?.daysAgo) || 0) * 24 * 60 + 30 + Math.random() * 600;
         if (entry?.retweet && String(entry.retweet.text || '').trim()) {
+            if (isUserAccountPost(data, entry.retweet)) continue;
             const tweet = makeTweet(data, { ...entry.retweet, minutesAgo }, { kind: 'history', maxMinutes: Infinity });
             tweet.retweetedBy = author.name;
             tweets.push(tweet);

@@ -227,7 +227,7 @@ Reply with ONLY JSON: {"messages": ["text", ...]} — 1 to 3 separate texts. Wri
     pending.add(key);
     attachComposers();
     try {
-        const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }], 1000);
+        const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }]);
         const texts = parseTexts(raw);
         const current = ctx().chat[messageId];
         if (!texts.length) throw new Error('empty-reply');

@@ -28,6 +28,7 @@ Reply with ONLY a JSON object, no commentary, no code fences:
 Person = {
   "name": string,       // their real full name
   "saved_as": string,   // how USER saved them in their phone, the way a real person does: "Mom", "Мама 💕", "Dad 🐻", "Mina 🏠", "Coach Voss", "Jihoon work", a pet name for a partner. Short, personal, in USER's voice.
+  "aliases": string,    // other names the story may call them, comma-separated: nicknames, short forms, other spellings/scripts ("Ally, Al, Элли"). Empty if none.
   "relation": string,   // who they are TO USER, short and specific ("older sister", "barista who flirts with USER")
   "style": string,      // how they TEXT: tone, length, punctuation, caps, emoji, slang, typos. 1-2 sentences. Every person must text differently.
   "handle": string,     // realistic social-media username: lowercase latin letters, digits, underscore; max 15 chars; not just their plain name
@@ -141,6 +142,7 @@ function parseReply(text) {
 
 const personFields = (p) => ({
     label: String(p.saved_as || p.savedAs || '').trim(),
+    aliases: String(Array.isArray(p.aliases) ? p.aliases.join(', ') : p.aliases || '').trim(),
     relation: String(p.relation || '').trim(),
     style: String(p.style || '').trim(),
     twitter: { enabled: Boolean(p.twitter), followers: sanitizeCount(p.followers), following: sanitizeCount(p.following) },
@@ -184,7 +186,7 @@ function seedMessages(chat, messages, senderOf, unread) {
  * @returns {Promise<{ contacts: number, groups: number, chats: number }>}
  */
 export async function generateContacts(data) {
-    const reply = await generate(getApi(), buildMessages(data), 8000);
+    const reply = await generate(getApi(), buildMessages(data));
     const parsed = parseReply(reply);
     const result = { contacts: 0, groups: 0, chats: 0 };
 

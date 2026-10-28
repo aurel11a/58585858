@@ -13,9 +13,10 @@ import { ICONS } from '../../ui/icons.js';
 import { $q, $qa, el } from '../../ui/dom.js';
 import { apiPage, apiSummary } from './api-page.js';
 import { imageStylePage, imageStyleSummary } from './image-style-page.js';
+import { appearancePage, appearanceSummary } from './appearance-page.js';
 import { cosInstalled } from '../twitter/images.js';
 
-const PAGES = [apiPage, imageStylePage];
+const PAGES = [apiPage, imageStylePage, appearancePage];
 
 /**
  * Разделы главного экрана: { title, rows }. Типы строк:
@@ -30,6 +31,7 @@ const GROUPS = [
         title: () => tr('sectionGeneral'),
         rows: [
             { type: 'page', page: 'api', icon: ICONS.plug, label: () => tr('apiSection'), value: apiSummary },
+            { type: 'page', page: 'appearance', icon: ICONS.palette, label: () => tr('appearance'), value: appearanceSummary },
             {
                 type: 'toggle', id: 'floating', icon: ICONS.phone, label: () => tr('floatingShort'),
                 get: () => getSettings().floatingButton, set: setFloatingButton,

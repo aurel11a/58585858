@@ -1,13 +1,18 @@
 // Карточка контакта: просмотр и правка всех полей. Экран внутри телефона, без диалогов.
 
 import { tr } from '../../i18n.js';
+import { LOG } from '../../core/context.js';
+import { deleteImage, pickImageFile, squareAvatar, uploadImage } from '../../ui/image.js';
 import { cleanHandle, findContact, HANDLE_MAX, isHandleTaken, makeContact, removeContact, sanitizeCount, uniqueHandle } from '../../core/contacts.js';
 import { mnemaRelationOf } from '../../core/mnema.js';
 import { getPhoneData, notifyDataChanged } from '../../core/store.js';
 import { avatarHtml } from '../../ui/avatar.js';
 import { el } from '../../ui/dom.js';
 
-/** @type {{ id: string|null, twitter: boolean, confirmDelete: boolean } | null} */
+/**
+ * avatar: undefined — не трогали, null — убрали, { blob, preview } — выбрали новое
+ * @type {{ id: string|null, twitter: boolean, confirmDelete: boolean, avatar?: { blob: Blob, preview: string } | null, saving?: boolean } | null}
+ */
 let card = null;
 let deleteTimer = null;
 
@@ -30,6 +35,10 @@ export function contactCardHtml() {
   </div>
   <div class="wv-scroll wv-ios-scroll">
     <div class="wv-editor-avatar" data-wv="cardAvatar"></div>
+    <div class="wv-photo-actions">
+      <span data-wv-action="cardPhoto">${tr('choosePhoto')}</span>
+      <span data-wv="cardPhotoRemove" data-wv-action="cardPhotoRemove">${tr('removePhoto')}</span>
+    </div>
     <div class="wv-card-badge" data-wv="cardBadge"></div>
 
     <div class="wv-ios-group">
@@ -40,6 +49,10 @@ export function contactCardHtml() {
       <label class="wv-ios-field">
         <span class="wv-ios-field-label">${tr('realName')}</span>
         <input class="wv-field" type="text" data-wv="cardName" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="wv-ios-field">
+        <span class="wv-ios-field-label">${tr('aliases')}</span>
+        <input class="wv-field" type="text" data-wv="cardAliases" autocomplete="off" spellcheck="false" placeholder="${tr('aliasesPh')}">
       </label>
       <label class="wv-ios-field">
         <span class="wv-ios-field-label">${tr('username')}</span>
@@ -97,7 +110,12 @@ function refreshCard() {
     const taken = data && handle && isHandleTaken(data, handle, card?.id);
     const contact = card?.id ? findContact(data, card.id) : null;
 
-    el('cardAvatar').innerHTML = avatarHtml({ name: label || name || '?', charAvatar: contact?.charAvatar }, 'wv-lg');
+    // превью: выбранное фото → своя аватарка контакта → картинка персонажа / буква
+    const photo = card?.avatar === undefined
+        ? { avatarPath: contact?.avatarPath ?? null }
+        : { avatarPreview: card.avatar?.preview ?? null, avatarPath: null };
+    el('cardAvatar').innerHTML = avatarHtml({ name: label || name || '?', charAvatar: contact?.charAvatar, ...photo }, 'wv-lg');
+    el('cardPhotoRemove').style.display = photo.avatarPreview || photo.avatarPath ? '' : 'none';
 
     // подсказка из Mnema, если поле «кем приходится» пустое
     const fromMnema = !input('cardRelation').value.trim() ? mnemaRelationOf(name) : '';
@@ -110,7 +128,7 @@ function refreshCard() {
 
     // пустой юзернейм можно — подберём сами; введённый должен быть не короче 2 символов
     const valid = (name || label).length > 0 && (handle.length === 0 || handle.length >= 2) && !taken;
-    el('cardDone').classList.toggle('wv-disabled', !valid);
+    el('cardDone').classList.toggle('wv-disabled', !valid || Boolean(card?.saving));
     return valid;
 }
 
@@ -126,6 +144,7 @@ export function openContactCard(contactId = null) {
     el('cardBadge').textContent = contact?.main ? tr('storyCharacter') : '';
     input('cardName').value = contact?.name ?? '';
     input('cardLabel').value = contact?.label ?? '';
+    input('cardAliases').value = contact?.aliases ?? '';
     input('cardHandle').value = cleanHandle(contact?.handle ?? '');
     input('cardRelation').value = contact?.relation ?? '';
     /** @type {HTMLTextAreaElement} */ (el('cardStyle')).value = contact?.style ?? '';
@@ -142,23 +161,69 @@ export function openContactCard(contactId = null) {
     if (!contact) setTimeout(() => input('cardLabel').focus(), 260);
 }
 
+function dropCardPreview() {
+    if (card?.avatar?.preview) URL.revokeObjectURL(card.avatar.preview);
+}
+
+/** Аватарка контакта — она же реф для его фото (вместо обычных рефов Chamber of Secrets) */
+async function chooseCardPhoto() {
+    if (!card) return;
+    const file = await pickImageFile();
+    if (!file || !card) return;
+    try {
+        const blob = await squareAvatar(file);
+        if (!card) return;
+        dropCardPreview();
+        card.avatar = { blob, preview: URL.createObjectURL(blob) };
+        refreshCard();
+    } catch (error) {
+        console.warn(LOG, 'contact avatar', error);
+    }
+}
+
+function removeCardPhoto() {
+    if (!card) return;
+    dropCardPreview();
+    card.avatar = null;
+    refreshCard();
+}
+
 function closeCard() {
+    dropCardPreview();
     card = null;
     clearTimeout(deleteTimer);
     el('contactCard')?.classList.remove('wv-open');
     /** @type {HTMLElement} */ (document.activeElement)?.blur?.();
 }
 
-function saveCard() {
-    if (!card || !refreshCard()) return;
+async function saveCard() {
+    if (!card || card.saving || !refreshCard()) return;
     const data = getPhoneData();
     if (!data) return closeCard();
+
+    // новое фото — файлом в папку wavey, в данных только путь
+    let newPath = null;
+    if (card.avatar) {
+        card.saving = true;
+        refreshCard();
+        try {
+            newPath = await uploadImage(card.avatar.blob);
+        } catch (error) {
+            console.warn(LOG, 'contact avatar upload', error);
+            card.saving = false;
+            el('cardHint').textContent = tr('photoFailed');
+            return refreshCard();
+        }
+        if (!card) return;
+    }
+    const avatarChanged = card.avatar !== undefined;
 
     const label = input('cardLabel').value.trim();
     const fields = {
         // имя обязательно для модели; если вписали только подпись — берём её
         name: input('cardName').value.trim() || label,
         label,
+        aliases: input('cardAliases').value.trim(),
         handle: cleanHandle(input('cardHandle').value),
         relation: input('cardRelation').value.trim(),
         style: /** @type {HTMLTextAreaElement} */ (el('cardStyle')).value.trim(),
@@ -170,11 +235,19 @@ function saveCard() {
     };
 
     const contact = card.id ? findContact(data, card.id) : null;
+    let saved = contact;
     if (contact) {
         Object.assign(contact, fields, { edited: true });
         contact.handle = uniqueHandle(data, fields.handle, contact.name, contact.id);
+    } else {
+        saved = makeContact(data, { ...fields, source: 'manual', edited: true });
+        data.contacts.push(saved);
     }
-    else data.contacts.push(makeContact(data, { ...fields, source: 'manual', edited: true }));
+    if (avatarChanged) {
+        // старый файл больше не нужен
+        if (saved.avatarPath && saved.avatarPath !== newPath) deleteImage(saved.avatarPath);
+        saved.avatarPath = newPath;
+    }
 
     closeCard();
     notifyDataChanged();
@@ -220,6 +293,8 @@ export function contactCardOnClick(target) {
         case 'cardCancel': return closeCard(), true;
         case 'cardDone': return saveCard(), true;
         case 'cardDelete': return deleteCard(), true;
+        case 'cardPhoto': return chooseCardPhoto(), true;
+        case 'cardPhotoRemove': return removeCardPhoto(), true;
         case 'cardTwitter':
             if (card) { card.twitter = !card.twitter; renderTwitterBlock(); }
             return true;

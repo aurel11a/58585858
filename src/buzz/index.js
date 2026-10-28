@@ -10,7 +10,7 @@ import { generate } from '../core/api.js';
 import { getApi, getSettings, SETTINGS_EVENT } from '../core/settings.js';
 import { getPhoneData, notifyDataChanged } from '../core/store.js';
 import { momentLine, userBlock } from '../apps/messages/reply.js';
-import { addTweets, makeTweet, parseJson, settingBlock, startImages, storyLanguage, twitterContactsBlock } from '../apps/twitter/feed.js';
+import { addTweets, isUserAccountPost, makeTweet, parseJson, settingBlock, startImages, storyLanguage, twitterContactsBlock } from '../apps/twitter/feed.js';
 import { imagePromptRule } from '../apps/twitter/images.js';
 
 const RULE_KEY = `${MODULE}_buzz_rule`;
@@ -119,13 +119,19 @@ async function surface(data, item) {
     ].filter(Boolean);
 
     const system = [THREAD_PROMPT.replace('{{language}}', storyLanguage()), imagePromptRule() && `${imagePromptRule()} Only the headline may have it.`].filter(Boolean).join('\n');
-    const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }], 3000);
-    const parsed = parseJson(raw);
+    const raw = await generate(getApi(), [{ role: 'system', content: system }, { role: 'user', content: sections.join('\n\n') }]);
+    return publishThread(data, parseJson(raw), item.fact);
+}
+
+/** Ответ модели (impact, headline, replies, summary) → твит в ленте и фон для основной модели */
+function publishThread(data, parsed, fact) {
     const impact = ['small', 'medium', 'viral'].includes(parsed.impact) ? parsed.impact : 'small';
 
+    // за аккаунты юзера модель не пишет — такой заголовок не публикуем
+    if (isUserAccountPost(data, parsed.headline)) return null;
     const tweet = makeTweet(data, { ...parsed.headline, replies: parsed.replies, minutesAgo: 5 + Math.random() * 40 }, { kind: 'buzz' });
     if (!tweet.text) return null;
-    tweet.buzz = { impact, fact: item.fact };
+    tweet.buzz = { impact, fact };
     addTweets(data, [tweet]);
     startImages([tweet]);
 
@@ -133,10 +139,26 @@ async function surface(data, item) {
     buzzState(data).active.push({
         tweetId: tweet.id,
         impact,
-        summary: String(parsed.summary || item.fact).trim(),
+        summary: String(parsed.summary || fact).trim(),
         at,
         expiresAt: at + BACKGROUND_LIFETIME,
     });
+    return tweet;
+}
+
+/**
+ * Сеть заговорила не из-за истории, а из-за действия в телефоне (например, подписки):
+ * твит в ленте, карточка под последним сообщением и фон для основной модели.
+ */
+export function publishPublicTalk(data, parsed, fact) {
+    if (!enabled()) return null;
+    const tweet = publishThread(data, parsed, fact);
+    if (!tweet) return null;
+    attachCardToStory(tweet);
+    data.twitterUnseen = true;
+    notifyDataChanged();
+    refreshBackground();
+    renderCards();
     return tweet;
 }
 

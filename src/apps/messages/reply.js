@@ -200,7 +200,7 @@ export async function requestReply(target, isOpen) {
     notifyDataChanged();
 
     try {
-        const raw = await generateWithPhotos(getApi(), prompt, recentPhotos(data, chat.messages), 1500);
+        const raw = await generateWithPhotos(getApi(), prompt, recentPhotos(data, chat.messages));
         const { messages: replies, memo } = parseReply(raw);
         const base = getStoryNow().getTime();
         let added = 0;

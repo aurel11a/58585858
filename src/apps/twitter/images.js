@@ -13,6 +13,8 @@ const COS_SETTINGS_KEY = 'chamber_gen';
 const COS_FOLDERS = ['vish-v2', 'chamber-of-secrets', 'Chamber-of-Secrets', 'vish'];
 /** Не больше стольких фото за одно обновление ленты */
 export const MAX_IMAGES_PER_BATCH = 2;
+/** Сколько минимум показываем «Фото загружается» перед ошибкой */
+const MIN_LOADING_MS = 1500;
 
 export const REALISM_STYLE = 'Candid smartphone photo posted on social media: realistic, natural light, true-to-life colors, slight grain and imperfect framing, no filters, no text overlays.';
 
@@ -25,14 +27,13 @@ export function imagePromptRule() {
 // ---------- Chamber of Secrets ----------
 
 let cos = null; // { generateImageWithRetry, folder } | null
-let cosChecked = false;
 
 const disabled = (folder) => (ctx().extensionSettings.disabledExtensions ?? []).includes(`third-party/${folder}`);
 
 /** Найти и подгрузить пайплайн Chamber of Secrets (тот же экземпляр модуля, что у расширения) */
 async function loadCos() {
-    if (cosChecked) return cos;
-    cosChecked = true;
+    // нашли — запоминаем; не нашли — пробуем снова в следующий раз (расширение могло догрузиться)
+    if (cos) return cos;
     if (!ctx().extensionSettings[COS_SETTINGS_KEY]) return null;
     for (const folder of COS_FOLDERS) {
         if (disabled(folder)) continue;
@@ -41,8 +42,9 @@ async function loadCos() {
             if (settingsModule.MODULE_NAME !== COS_SETTINGS_KEY) continue;
             const pipeline = await import(`/scripts/extensions/third-party/${folder}/src/pipeline.js`);
             const utils = await import(`/scripts/extensions/third-party/${folder}/src/utils.js`);
+            const providers = await import(`/scripts/extensions/third-party/${folder}/src/providers.js`).catch(() => null);
             if (typeof pipeline.generateImageWithRetry !== 'function') continue;
-            cos = { generateImageWithRetry: pipeline.generateImageWithRetry, saveImageToFile: utils.saveImageToFile, folder };
+            cos = { generateImageWithRetry: pipeline.generateImageWithRetry, saveImageToFile: utils.saveImageToFile, providers, folder };
             return cos;
         } catch { /* не та папка — пробуем следующую */ }
     }
@@ -128,12 +130,67 @@ function promptWithPeople(image) {
 
 /** Живое поле image у твита или сообщения чата */
 function imageOf(data, kind, id) {
-    if (kind === 'tweet') return findTweet(data, id)?.image ?? null;
+    return ownerOf(data, kind, id).image;
+}
+
+/** Поле image и контакт, от которого это фото (автор твита / отправитель сообщения) */
+function ownerOf(data, kind, id) {
+    if (kind === 'tweet') {
+        const tweet = findTweet(data, id);
+        const contact = tweet?.author?.contact ? data.contacts.find(c => c.id === tweet.author.id) : null;
+        return { image: tweet?.image ?? null, contact };
+    }
     for (const chat of data?.chats ?? []) {
         const message = chat.messages.find(m => m.id === id);
-        if (message) return message.image ?? null;
+        if (message) return { image: message.image ?? null, contact: data.contacts.find(c => c.id === message.from) ?? null };
     }
-    return null;
+    return { image: null, contact: null };
+}
+
+// ---------- реф из аватарки контакта ----------
+
+/** Провайдеры Chamber of Secrets, которые берут рефы как data URL (остальные — чистый base64) */
+const DATA_URL_PROVIDERS = new Set(['xai', 'openrouter', 'naistera']);
+
+async function fileToDataUrl(path) {
+    const url = '/' + String(path).replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/');
+    const blob = await (await fetch(url)).blob();
+    return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+/**
+ * Если у контакта стоит своя аватарка — на время генерации Chamber of Secrets получает
+ * рефом только её (вместо своих обычных рефов). Нет аватарки — рефы как обычно.
+ */
+async function withContactReference(contact, run) {
+    if (!contact?.avatarPath || !cos?.providers) return run();
+    const provider = cos.providers.resolveActiveProvider?.(ctx().extensionSettings[COS_SETTINGS_KEY]);
+    if (!provider || typeof provider.collectReferences !== 'function') return run();
+
+    let image;
+    try {
+        const dataUrl = await fileToDataUrl(contact.avatarPath);
+        image = DATA_URL_PROVIDERS.has(provider.id) ? dataUrl : dataUrl.split(',')[1];
+    } catch (error) {
+        console.warn(LOG, 'contact reference', error);
+        return run();
+    }
+    const reference = { image, description: `${contact.name} — what this person looks like`, source: 'additional' };
+
+    const ownMethod = Object.prototype.hasOwnProperty.call(provider, 'collectReferences');
+    const original = provider.collectReferences;
+    provider.collectReferences = async () => [reference];
+    try {
+        return await run();
+    } finally {
+        if (ownMethod) provider.collectReferences = original;
+        else delete provider.collectReferences;
+    }
 }
 
 /**
@@ -142,11 +199,17 @@ function imageOf(data, kind, id) {
  * @param {string} id
  */
 async function generateFor(kind, id) {
-    const image = imageOf(getPhoneData(), kind, id);
+    const { image, contact } = ownerOf(getPhoneData(), kind, id);
     if (!image || image.status !== 'pending') return;
+
+    // «Фото загружается» видно хотя бы немного, даже если ошибка пришла мгновенно —
+    // иначе непонятно, был ли повтор вообще
+    const started = Date.now();
+    const settle = () => new Promise(resolve => setTimeout(resolve, Math.max(0, MIN_LOADING_MS - (Date.now() - started))));
 
     const pipeline = await loadCos();
     if (!pipeline) {
+        await settle();
         image.status = 'failed';
         return notifyDataChanged();
     }
@@ -154,8 +217,8 @@ async function generateFor(kind, id) {
     const style = chosenStyle();
 
     try {
-        const generated = await withStyle(style.id, () =>
-            pipeline.generateImageWithRetry(promptWithPeople(image), style.text, null, {}));
+        const generated = await withStyle(style.id, () => withContactReference(contact, () =>
+            pipeline.generateImageWithRetry(promptWithPeople(image), style.text, null, {})));
         const path = await saveGenerated(pipeline, generated);
         const fresh = imageOf(getPhoneData(), kind, id);
         if (fresh) {
@@ -164,6 +227,7 @@ async function generateFor(kind, id) {
         }
     } catch (error) {
         console.warn(LOG, 'image', error);
+        await settle();
         const fresh = imageOf(getPhoneData(), kind, id);
         if (fresh) fresh.status = 'failed';
     }

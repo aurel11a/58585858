@@ -8,7 +8,8 @@ import { toLatin } from './format.js';
 const escapeRe = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * Как контакта могут назвать в тексте: полное имя, первое имя и прозвища в кавычках.
+ * Как контакта могут назвать в тексте: полное имя, первое имя, прозвища в кавычках
+ * и вариации из карточки («Ally, Al, Элли»).
  * «Johnathan "John" Fletcher» → [Johnathan "John" Fletcher, Johnathan, John]
  */
 export function nameTokens(contact) {
@@ -18,7 +19,13 @@ export function nameTokens(contact) {
     const first = full.split(/\s+/)[0].replace(/["«»“”']/g, '');
     if (first.length >= 3) tokens.add(first);
     for (const match of full.matchAll(/["«“']([^"»”']{2,})["»”']/g)) tokens.add(match[1].trim());
+    for (const alias of splitAliases(contact?.aliases)) tokens.add(alias);
     return [...tokens];
+}
+
+/** «Ally, Al , Элли» → ['Ally', 'Al', 'Элли'] */
+export function splitAliases(value) {
+    return String(value ?? '').split(/[,;\n]/).map(s => s.trim()).filter(s => s.length >= 2);
 }
 
 function wordRegex(tokens) {

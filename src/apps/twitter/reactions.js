@@ -8,7 +8,7 @@ import { getApi } from '../../core/settings.js';
 import { getPhoneData, notifyDataChanged } from '../../core/store.js';
 import { getStoryNow } from '../../core/story-clock.js';
 import { momentLine } from '../messages/reply.js';
-import { authorFrom, parseJson, publicKnowledgeBlock, settingBlock, storyLanguage, twitterContactsBlock } from './feed.js';
+import { authorFrom, isUserAccountPost, parseJson, publicKnowledgeBlock, settingBlock, storyLanguage, twitterContactsBlock } from './feed.js';
 
 /** Пауза после публикации, прежде чем пойдёт отклик */
 const FIRST_DELAY_MS = 4000;
@@ -72,7 +72,7 @@ export async function reactToTweet(tweetId, isWatching) {
         const raw = await generateWithPhotos(getApi(), [
             { role: 'system', content: PROMPT.replace('{{language}}', storyLanguage()) },
             { role: 'user', content: sections.join('\n\n') },
-        ], photos, 2500);
+        ], photos);
         parsed = parseJson(raw);
     } catch (error) {
         // без попапов: в худшем случае твит просто останется без реакции
@@ -86,7 +86,8 @@ export async function reactToTweet(tweetId, isWatching) {
         views: Math.max(count(parsed.views), count(parsed.likes)),
         followers: count(parsed.newFollowers),
     };
-    const replies = (Array.isArray(parsed.replies) ? parsed.replies : []).filter(r => String(r?.text || '').trim());
+    const replies = (Array.isArray(parsed.replies) ? parsed.replies : [])
+        .filter(r => String(r?.text || '').trim() && !isUserAccountPost(data, r));
     const start = { likes: tweet.likes || 0, retweets: tweet.retweets || 0, views: tweet.views || 0, followers: account.followers || 0 };
 
     // ответы раскладываем по шагам: сначала тихо, потом по одному
