@@ -332,16 +332,21 @@ export const imagesAuto = () => Boolean(getSettings().tweetImagesAuto);
  * @param {string} tweetId
  */
 export function requestTweetImage(tweetId) {
+    alert('1. requestTweetImage вызвана, tweetId=' + tweetId);
     const data = getPhoneData();
     const tweet = findTweet(data, tweetId);
-    if (!tweet?.image || tweet.image.status === 'pending') return;
-    // перерисовка: старый файл удаляем, если его не переслали в какой-нибудь чат
+    alert('2. tweet найден: ' + (tweet ? 'ДА' : 'НЕТ') + ' | image: ' + (tweet?.image ? tweet.image.status : 'ОТСУТСТВУЕТ'));
+    if (!tweet?.image || tweet.image.status === 'pending') {
+        alert('3. ВЫХОД: image нет или status=pending');
+        return;
+    }
     const old = tweet.image.path;
     const sharedSomewhere = old && data.chats.some(chat => chat.messages.some(m => m.tweet?.image?.path === old));
     if (old && !sharedSomewhere) deleteImage(old);
     tweet.image.path = null;
     tweet.image.status = 'pending';
     notifyDataChanged();
+    alert('4. ставлю в очередь queueImages');
     queueImages('tweet', [tweetId]);
 }
 
