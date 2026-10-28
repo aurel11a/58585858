@@ -3,6 +3,7 @@
 import { ctx, MODULE } from './context.js';
 import { makeHandle } from './format.js';
 import { ensureContacts } from './contacts.js';
+import { applyPins, syncPins } from './persona-pins.js';
 
 /** Возвращает данные текущего чата или null, если чат не открыт */
 export function getPhoneData() {
@@ -20,6 +21,8 @@ export function getPhoneData() {
         data.currentAccountId = data.accounts[0].id;
     }
     ensureContacts(data);
+    // аккаунты/контакты, закреплённые за персоной, — общие для всех её чатов
+    applyPins(data);
     return data;
 }
 
@@ -31,6 +34,8 @@ export function findTweet(data, id) {
 }
 
 export function savePhoneData() {
+    const data = ctx().chatMetadata?.[MODULE];
+    if (data) syncPins(data);
     ctx().saveMetadataDebounced();
 }
 

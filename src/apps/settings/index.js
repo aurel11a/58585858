@@ -7,7 +7,9 @@ import { escapeHtml, makeEmail } from '../../core/format.js';
 import { getSettings, setFloatingButton, setSetting, SETTINGS_EVENT } from '../../core/settings.js';
 import { getStoryClock } from '../../core/story-clock.js';
 import { localeTag } from '../../core/format.js';
-import { getPersonaName } from '../../core/store.js';
+import { getPersonaName, getPhoneData, notifyDataChanged } from '../../core/store.js';
+import { isPinned, setPinned } from '../../core/persona-pins.js';
+import { resetPage } from './reset-page.js';
 import { avatarHtml } from '../../ui/avatar.js';
 import { ICONS } from '../../ui/icons.js';
 import { $q, $qa, el } from '../../ui/dom.js';
@@ -16,7 +18,21 @@ import { imageStylePage, imageStyleSummary } from './image-style-page.js';
 import { appearancePage, appearanceSummary } from './appearance-page.js';
 import { cosInstalled } from '../twitter/images.js';
 
-const PAGES = [apiPage, imageStylePage, appearancePage];
+const PAGES = [apiPage, imageStylePage, appearancePage, resetPage];
+
+/** Закрепить за персоной: работает в открытом чате (иначе телефона нет) */
+function pinRow(kind, icon, label) {
+    return {
+        type: 'toggle', id: `pin_${kind}`, icon, label,
+        get: () => isPinned(kind),
+        set: (value) => {
+            const data = getPhoneData();
+            if (!data) return;
+            setPinned(data, kind, value);
+            notifyDataChanged();
+        },
+    };
+}
 
 /**
  * Разделы главного экрана: { title, rows }. Типы строк:
@@ -121,6 +137,19 @@ const GROUPS = [
                 type: 'page', page: 'imageStyle', icon: ICONS.sparkle, label: () => tr('imageStyle'), value: imageStyleSummary,
                 hidden: () => !cosInstalled(),
             },
+        ],
+    },
+    {
+        title: () => tr('sectionPersona'),
+        footer: () => tr('pinFooter'),
+        rows: [
+            pinRow('accounts', ICONS.bird, () => tr('pinAccounts')),
+            pinRow('contacts', ICONS.users, () => tr('pinContacts')),
+        ],
+    },
+    {
+        rows: [
+            { type: 'page', page: 'reset', icon: ICONS.trash, label: () => tr('resetPhone'), value: () => '' },
         ],
     },
 ];

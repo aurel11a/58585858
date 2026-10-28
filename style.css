@@ -1795,3 +1795,4 @@
 #wavey-phone .wv-color-pick { position: relative; width: 28px; height: 28px; flex-shrink: 0; margin-left: auto; }
 #wavey-phone .wv-color-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; }
 #wavey-phone .wv-color-pick span { display: block; width: 100%; height: 100%; border-radius: 50%; border: 1px solid var(--wv-chip-border); pointer-events: none; }
+#wavey-phone .wv-ios-button.wv-disabled { opacity: 0.35; pointer-events: none; }
