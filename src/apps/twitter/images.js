@@ -94,7 +94,14 @@ async function toDataUrl(generated) {
     const src = typeof generated === 'string' ? generated : generated?.posterDataUrl || generated?.dataUrl;
     if (!src) throw new Error('empty image');
     if (src.startsWith('data:')) return src;
-    const blob = await (await fetch(src)).blob();
+    let blob;
+    try {
+        const resp = await fetch(src, { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`fetch image HTTP ${resp.status}`);
+        blob = await resp.blob();
+    } catch (e) {
+        throw new Error(`Не удалось загрузить картинку по URL (${src}): ${e.message}`);
+    }
     return await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -283,7 +290,8 @@ async function generateFor(kind, id) {
             fresh.status = 'done';
         }
     } catch (error) {
-        console.warn(LOG, 'image', error);
+        console.error('[Wavey image]', error);
+        alert('Wavey image error: ' + (error?.message || error));
         await settle();
         const fresh = imageOf(getPhoneData(), kind, id);
         if (fresh) fresh.status = 'failed';
