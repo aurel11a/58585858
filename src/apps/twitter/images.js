@@ -262,51 +262,35 @@ async function withPeopleReferences(people, run) {
  * @param {string} id
  */
 async function generateFor(kind, id) {
-    alert('GEN 1: старт generateFor для ' + kind + ' ' + id);
     const { image } = ownerOf(getPhoneData(), kind, id);
-    if (!image || image.status !== 'pending') {
-        alert('GEN 2: ВЫХОД - нет image или статус не pending');
-        return;
-    }
+    if (!image || image.status !== 'pending') return;
 
+    // «Фото загружается» видно хотя бы немного, даже если ошибка пришла мгновенно —
+    // иначе непонятно, был ли повтор вообще
     const started = Date.now();
     const settle = () => new Promise(resolve => setTimeout(resolve, Math.max(0, MIN_LOADING_MS - (Date.now() - started))));
 
-    alert('GEN 3: загружаю loadCos()');
     const pipeline = await loadCos();
     if (!pipeline) {
-        alert('GEN 4: ОШИБКА - loadCos вернул null (Chamber of Secrets не найден или отключен)');
         await settle();
         image.status = 'failed';
         return notifyDataChanged();
     }
 
-    alert('GEN 5: pipeline загружен успешно');
     const style = chosenStyle();
-    alert('GEN 5.1: стиль выбран, id=' + (style.id || 'realism') + ', длина text=' + style.text.length);
 
     try {
-        alert('GEN 6: собираю людей в кадре');
         const people = peopleInPhoto(getPhoneData(), image);
-        alert('GEN 6.1: люди собраны. Запускаю withStyle + generateImageWithRetry');
-        
         const generated = await withStyle(style.id, () => withPeopleReferences(people, () =>
             pipeline.generateImageWithRetry(promptWithPeople(image), style.text, null, {})));
-            
-        alert('GEN 7: генерация завершилась успешно! Тип результата: ' + typeof generated);
-        
-        alert('GEN 7.1: сохраняю файл');
         const path = await saveGenerated(pipeline, generated);
-        alert('GEN 8: файл сохранен, путь: ' + path);
-        
         const fresh = imageOf(getPhoneData(), kind, id);
         if (fresh) {
             fresh.path = path;
             fresh.status = 'done';
         }
-        alert('GEN 9: УСПЕХ! Статус изменен на done');
     } catch (error) {
-        alert('GEN 10: ОШИБКА В CATCH!\n\n' + String(error?.stack || error?.message || error));
+        console.error('[Wavey image]', error);
         await settle();
         const fresh = imageOf(getPhoneData(), kind, id);
         if (fresh) fresh.status = 'failed';
@@ -347,14 +331,9 @@ export const imagesAuto = () => Boolean(getSettings().tweetImagesAuto);
  * @param {string} tweetId
  */
 export function requestTweetImage(tweetId) {
-    alert('1. requestTweetImage вызвана, tweetId=' + tweetId);
     const data = getPhoneData();
     const tweet = findTweet(data, tweetId);
-    alert('2. tweet найден: ' + (tweet ? 'ДА' : 'НЕТ') + ' | image: ' + (tweet?.image ? tweet.image.status : 'ОТСУТСТВУЕТ'));
-    if (!tweet?.image || tweet.image.status === 'pending') {
-        alert('3. ВЫХОД: image нет или status=pending');
-        return;
-    }
+    if (!tweet?.image || tweet.image.status === 'pending') return;
     // перерисовка: старый файл удаляем, если его не переслали в какой-нибудь чат
     const old = tweet.image.path;
     const sharedSomewhere = old && data.chats.some(chat => chat.messages.some(m => m.tweet?.image?.path === old));
@@ -362,7 +341,6 @@ export function requestTweetImage(tweetId) {
     tweet.image.path = null;
     tweet.image.status = 'pending';
     notifyDataChanged();
-    alert('4. ставлю в очередь queueImages');
     queueImages('tweet', [tweetId]);
 }
 
