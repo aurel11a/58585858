@@ -11,7 +11,7 @@ import { mentions } from '../../core/presence.js';
 
 const COS_SETTINGS_KEY = 'chamber_gen';
 /** Папки, где обычно лежит Chamber of Secrets (имя папки = имя репозитория) */
-const COS_FOLDERS = ['vish-v2', 'chamber-of-secrets', 'Chamber-of-Secrets', 'vish'];
+const COS_FOLDERS = ['888888', 'vish-v2', 'chamber-of-secrets', 'Chamber-of-Secrets', 'vish'];
 /** Не больше стольких фото за одно обновление ленты */
 export const MAX_IMAGES_PER_BATCH = 2;
 /** Сколько минимум показываем «Фото загружается» перед ошибкой */
