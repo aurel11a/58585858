@@ -314,28 +314,6 @@ async function generateFor(kind, id) {
     notifyDataChanged();
 }
 
-    const style = chosenStyle();
-
-    try {
-        const people = peopleInPhoto(getPhoneData(), image);
-        const generated = await withStyle(style.id, () => withPeopleReferences(people, () =>
-            pipeline.generateImageWithRetry(promptWithPeople(image), style.text, null, {})));
-        const path = await saveGenerated(pipeline, generated);
-        const fresh = imageOf(getPhoneData(), kind, id);
-        if (fresh) {
-            fresh.path = path;
-            fresh.status = 'done';
-        }
-    } catch (error) {
-        console.error('[Wavey image]', error);
-        alert('Wavey image error: ' + (error?.message || error));
-        await settle();
-        const fresh = imageOf(getPhoneData(), kind, id);
-        if (fresh) fresh.status = 'failed';
-    }
-    notifyDataChanged();
-}
-
 let queue = Promise.resolve();
 
 /** Поставить фото в очередь — по одному, чтобы не долбить провайдера параллельно */
@@ -377,6 +355,7 @@ export function requestTweetImage(tweetId) {
         alert('3. ВЫХОД: image нет или status=pending');
         return;
     }
+    // перерисовка: старый файл удаляем, если его не переслали в какой-нибудь чат
     const old = tweet.image.path;
     const sharedSomewhere = old && data.chats.some(chat => chat.messages.some(m => m.tweet?.image?.path === old));
     if (old && !sharedSomewhere) deleteImage(old);
