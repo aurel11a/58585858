@@ -2,6 +2,7 @@
 // Приватные сцены публике неизвестны; известно только то, что уже «вышло в сеть» (buzz).
 
 import { ctx } from '../../core/context.js';
+import { REAL_LIFE_PUBLIC } from '../../core/realism.js';
 import { generate } from '../../core/api.js';
 import { getApi, getSettings } from '../../core/settings.js';
 import { cleanHandle, findContactByName, resolveContact } from '../../core/contacts.js';
@@ -173,6 +174,7 @@ Mix: local news for the place, world/setting news that fits the date and era, sp
 Never write posts or replies from any of USER's own accounts — only USER posts from them.
 NPC accounts need realistic display names and handles that fit the setting's culture. Engagement must be realistic: most posts are small, a few are big.
 If PUBLIC CHATTER is listed, a post or two may touch it — lightly.
+${REAL_LIFE_PUBLIC}
 Reply with ONLY JSON:
 {"tweets": [{"name": "...", "handle": "...", "text": "...", "likes": 0, "retweets": 0, "views": 0, "minutesAgo": 0, "replies": [{"name": "...", "handle": "...", "text": "..."}]}]}
 Write {{count}} tweets, 0-3 replies each, minutesAgo between 1 and 600. Write them in {{language}}.`;

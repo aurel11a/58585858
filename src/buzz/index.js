@@ -4,6 +4,7 @@
 // под сообщением появляется карточка «горячая новость», а основная модель получает фоновую заметку.
 
 import { tr } from '../i18n.js';
+import { REAL_LIFE_PUBLIC } from '../core/realism.js';
 import { ctx, LOG, MODULE } from '../core/context.js';
 import { escapeHtml, formatCount } from '../core/format.js';
 import { generate } from '../core/api.js';
@@ -105,6 +106,7 @@ IMPACT:
 Scale everything to the impact: small → dozens of likes and 2-4 replies; medium → hundreds or thousands and 4-7 replies; viral → big numbers and 6-10 replies.
 People know ONLY the PUBLIC FACT — not private details, feelings or what happened behind closed doors. Reactions are human and mixed: jokes, takes, doubts, people who don't care, sometimes wrong guesses.
 TWITTER CONTACTS may join only if they would realistically see it, in their own style.
+${REAL_LIFE_PUBLIC}
 Reply with ONLY JSON:
 {"impact": "small|medium|viral", "headline": {"name": "...", "handle": "...", "text": "...", "likes": 0, "retweets": 0, "views": 0}, "replies": [{"name": "...", "handle": "...", "text": "..."}], "summary": "one English sentence for the narrator: what the online talk is like and how big it is"}
 Write the tweets in {{language}}.`;

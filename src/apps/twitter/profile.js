@@ -2,6 +2,7 @@
 // чтобы был виден вайб человека. История пишется экстра-API один раз, по кнопке — заново.
 
 import { generate } from '../../core/api.js';
+import { REAL_LIFE_PUBLIC } from '../../core/realism.js';
 import { getApi } from '../../core/settings.js';
 import { cleanHandle } from '../../core/contacts.js';
 import { getStoryNow } from '../../core/story-clock.js';
@@ -46,6 +47,7 @@ export function authorTweets(data, handle) {
 const PROFILE_PROMPT = `You create the Twitter/X profile of one person in an ongoing roleplay story, as USER would see it when opening it.
 Write their bio and their recent timeline BEFORE now: own tweets and retweets of others that show who they are — their vibe, interests, humor, daily life, opinions. Stay true to the person; it is a real account, not a summary of the story. Private scenes are unknown to the public: no spoilers of private events.
 Engagement must match the account size. Retweets are of other accounts (realistic NPC names/handles fitting the setting).
+${REAL_LIFE_PUBLIC}
 Reply with ONLY JSON:
 {"bio": "...", "followers": 0, "following": 0, "tweets": [{"text": "...", "likes": 0, "retweets": 0, "views": 0, "daysAgo": 0, "replies": [{"name": "...", "handle": "...", "text": "..."}]} or {"retweet": {"name": "...", "handle": "...", "text": "...", "likes": 0, "retweets": 0, "views": 0}, "daysAgo": 0}]}
 Write 8-12 timeline entries, daysAgo between 0 and 60, 0-2 replies on own tweets. Write them in {{language}}.`;

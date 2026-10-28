@@ -12,6 +12,7 @@ import { getApi, getSettings, SETTINGS_EVENT } from '../core/settings.js';
 import { displayName } from '../core/contacts.js';
 import { formatStory, storyWindow } from '../core/presence.js';
 import { chatLanguage, momentLine, personBlock, userBlock } from '../apps/messages/reply.js';
+import { REAL_LIFE_TEXTING } from '../core/realism.js';
 import { appendToAppendix, isUserBlock, isUserName, parseAppendix, parseBlocks, removeFromAppendix, stripAppendix } from './blocks.js';
 import { scheduleStorySync } from './sync.js';
 import { ReplyPacer } from '../ui/pacer.js';
@@ -215,6 +216,7 @@ async function requestCharacterReply(messageId, blockIndex) {
 
     const system = `You are ${owner.name}, texting ${name1} (USER) on the phone in the middle of an ongoing roleplay scene.
 Stay fully in character. Text exactly like this person would: tone, length, punctuation, emoji, slang. Never narrate, never use asterisks — only the texts.
+${REAL_LIFE_TEXTING}
 Reply with ONLY JSON: {"messages": ["text", ...]} — 1 to 3 separate texts. Write them in ${chatLanguage(block.lines.map(l => ({ text: l.text })))}.`;
     const sections = [
         `YOU:\n${personBlock(owner)}`,

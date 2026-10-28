@@ -3,6 +3,7 @@
 // это кто-нибудь, и если да — сеть обсуждает, как с горячей новостью из истории.
 
 import { ctx, LOG } from '../../core/context.js';
+import { REAL_LIFE_PUBLIC } from '../../core/realism.js';
 import { generate } from '../../core/api.js';
 import { getApi, getSettings } from '../../core/settings.js';
 import { getCurrentAccount, notifyDataChanged } from '../../core/store.js';
@@ -60,6 +61,7 @@ If it is noticed, write how Twitter reacts, scaled to how far it spreads:
 - "medium": a topic for a day (hundreds or thousands of likes, 4-7 replies).
 - "viral": only if it is genuinely huge.
 Reactions are human and mixed: jokes, theories, people who don't care. TWITTER CONTACTS may join only if they would realistically see it.
+${REAL_LIFE_PUBLIC}
 Reply with ONLY JSON:
 {"noticed": true, "impact": "small|medium|viral", "headline": {"name": "...", "handle": "...", "text": "...", "likes": 0, "retweets": 0, "views": 0}, "replies": [{"name": "...", "handle": "...", "text": "..."}], "summary": "one English sentence for the narrator: what people online are saying and how big it is"}
 Write the tweets in {{language}}.`;

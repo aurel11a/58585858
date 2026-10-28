@@ -3,6 +3,7 @@
 // а цифры и ответы приходят постепенно, как в жизни.
 
 import { LOG } from '../../core/context.js';
+import { REAL_LIFE_PUBLIC } from '../../core/realism.js';
 import { generateWithPhotos } from '../../core/vision.js';
 import { getApi } from '../../core/settings.js';
 import { getPhoneData, notifyDataChanged } from '../../core/store.js';
@@ -25,6 +26,7 @@ Engagement MUST be proportional to the account and the post:
 - A secret/alt account barely reaches anyone; nobody there knows it is USER unless the note says so.
 - The text matters: funny, controversial, emotional or newsworthy posts travel further; dull ones don't.
 Replies come from realistic NPC accounts fitting the setting. TWITTER CONTACTS may reply only if they would realistically follow this account, in their own style.
+${REAL_LIFE_PUBLIC}
 Reply with ONLY JSON:
 {"likes": 0, "retweets": 0, "views": 0, "newFollowers": 0, "replies": [{"name": "...", "handle": "...", "text": "..."}]}
 Write replies in {{language}}.`;

@@ -14,6 +14,7 @@ import { chatLanguage, momentLine, personBlock, phoneHistory, userBlock } from '
 import { showBanner } from '../../ui/banner.js';
 import { memoRule, saveMemo } from './memo.js';
 import { normalizeEntry, VOICE_RULE } from '../../core/voice.js';
+import { REAL_LIFE_TEXTING } from '../../core/realism.js';
 import { tr } from '../../i18n.js';
 
 /** Сколько сообщений истории должно пройти после чьей-то инициативы */
@@ -32,6 +33,8 @@ KNOWLEDGE RULE — strict:
 - Contacts marked "present: no" were NOT there. They do not know what exactly happened in the scene. They can only write from their own life, the general recent context of their relationship with USER, the time, the weekday, a holiday on this date, or continue their phone conversation.
 
 Each texter writes in their own texting style. Never narrate, never use asterisks — only the texts themselves.
+People text first for real reasons (a need, worry, news, a plan, missing someone), not to entertain.
+${REAL_LIFE_TEXTING}
 ${VOICE_RULE}
 A group chat message is allowed if it fits (someone posts in the family chat, etc.).
 Reply with ONLY JSON:

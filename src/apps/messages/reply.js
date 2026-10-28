@@ -12,6 +12,7 @@ import { formatStory, isPresent, storyWindow } from '../../core/presence.js';
 import { showBanner } from '../../ui/banner.js';
 import { historyText, normalizeEntry, VOICE_RULE } from '../../core/voice.js';
 import { generateWithPhotos } from '../../core/vision.js';
+import { REAL_LIFE_TEXTING } from '../../core/realism.js';
 import { tr } from '../../i18n.js';
 import { memoRule, saveMemo } from './memo.js';
 import { chatImageFromRaw, chatPhotoRule, startChatImages } from '../twitter/images.js';
@@ -91,6 +92,7 @@ export function phoneHistory(data, messages, limit = PHONE_HISTORY) {
 const RULES = `Stay fully in character. Text exactly like this person would on a phone: their tone, message length, punctuation, emoji, slang. Never narrate actions, never use asterisks, never describe — only the texts themselves.
 Use the CURRENT MOMENT: time of day, weekday, and if this date is a holiday or notable day in this setting, it may come up naturally.
 Only know what you could know. If STORY is not given, you were not part of recent events: do not reference them.
+${REAL_LIFE_TEXTING}
 ${VOICE_RULE}`;
 
 const rules = () => [RULES, chatPhotoRule()].filter(Boolean).join('\n');
